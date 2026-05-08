@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.local
+.env.*.local
+
+# generated session output (per-customer artifacts; not source)
+output/
+
+# node
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# temp
+tmp/
+*.tmp
