@@ -13,6 +13,30 @@ You design the banner (310×600) + header (1366×200) in Canva. You orchestrate 
 
 ---
 
+## Skills
+
+Before each phase, read and apply:
+- `.claude/skills/visual-design-principles.md` — comprehensive design reference for all 4 phases
+- `.claude/skills/marketing-thinking.md` — use §4 (Tone→Visual mapping) when constructing direction descriptions and image prompts
+
+**Per-phase skill sections to apply:**
+
+| Phase | Skill sections to use |
+|-------|----------------------|
+| `directions` | visual-design §3 (Direction Archetypes), §2 (Color Theory), marketing §4 (Tone mapping) |
+| `backgrounds` | visual-design §4 (Image Prompt Construction) — **mandatory central-third sentence for all header prompts** |
+| `compose` | visual-design §5 (Typography), §6 (Logo Placement), §8 (Editing Operations Order), §7 (Quality Gates) |
+| `abort` | No skill required |
+
+Key rules from the skills to apply during execution:
+- **Direction names** must match one of the §3 archetypes (Immersive Scene / Color Block / Gradient Atmosphere) or be a named variant — never "Direction 1/2/3"
+- **Every header image prompt** must contain the exact central-third sentence from §4 — this is mandatory for correct crop behavior
+- **Contrast check** before composing: verify text color passes §2 WCAG AA minimum against background
+- **Logo size** capped at 35% banner width, minimum 60px — per §6
+- **Quality gate §7** must pass before returning `status:"ok"` in `phase=compose`
+
+---
+
 ## Input Contract
 
 ```json

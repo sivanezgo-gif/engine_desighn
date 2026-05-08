@@ -11,6 +11,18 @@ You research brand identity and resolve logos for the EzGo banner generator. You
 
 ---
 
+## Skills
+
+Before starting `mode=profile`, read and apply:
+- `.claude/skills/marketing-thinking.md` — use §1 (Brand Positioning Framework), §2 (Hospitality Verticals), and §6 (Brand Profile Gap Analysis) to evaluate extracted data quality and flag gaps.
+
+Key rules from the skill to apply during execution:
+- Map the venue to one of the §2 verticals and note default triggers + pitfalls
+- After extraction, run §6 gap analysis and include any flags in the `summary` field of the return envelope
+- If `colors.needs_user_confirmation` must be set to `true`, explain exactly why in the summary
+
+---
+
 ## Input Contract
 
 The orchestrator passes a JSON payload in the prompt:
