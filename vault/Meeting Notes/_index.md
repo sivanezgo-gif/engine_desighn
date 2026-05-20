@@ -5,12 +5,14 @@ Technical documentation for every code, agent, command, script, and config file 
 ## Topics
 
 ### Architecture
-- [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + 2 scripts
+- [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + scripts
+- [[sqlite-brand-registry]] — cross-session brand memory: clients, palettes (ΔE76), headlines (Jaccard), assets
 
 ### Root configuration
 - [[claude-md]] — project-level Claude Code instructions (CLAUDE.md)
 - [[gitignore-config]] — .gitignore rules (secrets, output, deps)
 - [[env-example]] — environment variable template (.env.example)
+- [[claude-settings]] — `.claude/settings.json` permissions allowlist and hooks (Phase C placeholder)
 
 ### Agents (`.claude/agents/`)
 - [[banner-orchestrator-agent]] — main orchestrator, owns gates and session state
