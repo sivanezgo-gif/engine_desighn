@@ -22,3 +22,9 @@ EzGo banner generation system: a multi-agent Claude Code project that produces a
 - **Decisions:** Treat the SQLite registry as a peer architectural component, not "just another helper script". Reasoning: it crosses session boundaries, the agents will query it, and it changes how brand consistency is enforced. Documenting it at the architecture level (not only as a script doc) makes that role visible.
 - **Notes / Caveats:** This is the first ship in the 4-phase quality upgrade plan ([[../plans/eager-mixing-mountain]] external). Open Questions D2–D5 in this file pre-date the upgrade and are still open.
 - **Related:** [[sqlite-brand-registry]], [[claude-settings]], [[env-example]]
+
+### 2026-05-20 — Phase B3+B4: rembg + Real-ESRGAN pipeline added [shipped]
+- **What was done:** Added two local image-enhancement scripts (see [[image-enhancement-scripts]]) — `scripts/remove_bg.js` (rembg) and `scripts/upscale.js` (Real-ESRGAN). Both run locally with no API keys; both verified end-to-end against the spa-ben-ami logo. Commit `75a09ca`. The brand-researcher and canva-designer agents will start calling these in Phase B6 / B7.
+- **Decisions:** Canonical pipeline order is rembg FIRST, upscale SECOND. Reversing the order erases the subject (Real-ESRGAN's smoothing confuses rembg's segmentation — verified at 92.4% over-removal on the spa logo). Locked this in the wrapper script headers and the topic doc so future maintainers see it before they get burned.
+- **Notes / Caveats:** Real-ESRGAN binary lives in `tools/realesrgan/` (now gitignored — added in this commit). rembg uses a `python -c` invocation because Python 3.14 dropped support for `python -m rembg`; we'll be able to simplify if rembg ever adds a `__main__`. Replicate / Unsplash / Figma MCPs (the rest of Phase B) are blocked on user tokens.
+- **Related:** [[image-enhancement-scripts]], [[brand-researcher-agent]], [[canva-designer-agent]]

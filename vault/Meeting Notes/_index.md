@@ -26,6 +26,7 @@ Technical documentation for every code, agent, command, script, and config file 
 ### Scripts (`scripts/`)
 - [[openai-image-script]] — gpt-image-2 background generation CLI
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
+- [[image-enhancement-scripts]] — rembg (background removal) + Real-ESRGAN (upscaling) pipeline for logos
 
 ### Built-in skill docs (`.claude/skills/obsidian-*`)
 - [[obsidian-markdown-skill]] — Obsidian Flavored Markdown reference
