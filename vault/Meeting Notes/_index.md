@@ -12,7 +12,7 @@ Technical documentation for every code, agent, command, script, and config file 
 - [[claude-md]] — project-level Claude Code instructions (CLAUDE.md)
 - [[gitignore-config]] — .gitignore rules (secrets, output, deps)
 - [[env-example]] — environment variable template (.env.example)
-- [[claude-settings]] — `.claude/settings.json` permissions allowlist and hooks (Phase C placeholder)
+- [[claude-settings]] — `.claude/settings.json` permissions allowlist + Stop/SessionEnd vault-sync hooks
 
 ### Agents (`.claude/agents/`)
 - [[banner-orchestrator-agent]] — main orchestrator, owns gates and session state
@@ -27,6 +27,7 @@ Technical documentation for every code, agent, command, script, and config file 
 - [[openai-image-script]] — gpt-image-2 background generation CLI
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
 - [[image-enhancement-scripts]] — rembg (background removal) + Real-ESRGAN (upscaling) pipeline for logos
+- [[vault-sync-hook]] — Obsidian auto-sync: mirror worktree vault→main + auto-commit (Stop/SessionEnd hooks)
 
 ### Built-in skill docs (`.claude/skills/obsidian-*`)
 - [[obsidian-markdown-skill]] — Obsidian Flavored Markdown reference
