@@ -10,6 +10,7 @@
       "Bash(node scripts/upscale.js:*)",
       "Bash(node scripts/remove_bg.js:*)",
       "Bash(node scripts/validate_export.js:*)",
+      "Bash(node scripts/sync_vault.js:*)",
       "Bash(python scripts/remove_bg.py:*)",
       "Bash(realesrgan-ncnn-vulkan:*)",
       "Bash(npm install:*)",
@@ -24,5 +25,26 @@
       "Bash(git diff:*)"
     ]
   },
-  "hooks": {}
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/sync_vault.js --trigger stop"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/sync_vault.js --trigger session-end"
+          }
+        ]
+      }
+    ]
+  }
 }
