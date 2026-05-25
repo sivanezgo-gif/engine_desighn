@@ -13,6 +13,7 @@ Technical documentation for every code, agent, command, script, and config file 
 - [[gitignore-config]] — .gitignore rules (secrets, output, deps)
 - [[env-example]] — environment variable template (.env.example)
 - [[claude-settings]] — `.claude/settings.json` permissions allowlist + Stop/SessionEnd vault-sync hooks
+- [[figma-mcp]] — `.mcp.json` Figma MCP server (Framelink, PAT-based; manual approval on restart)
 
 ### Agents (`.claude/agents/`)
 - [[banner-orchestrator-agent]] — main orchestrator, owns gates and session state

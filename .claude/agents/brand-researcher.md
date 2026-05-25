@@ -32,6 +32,7 @@ The orchestrator passes a JSON payload in the prompt:
   "session_dir": "./output/{session_id}/",
   "business_name": "string",
   "url": "string|null",                            // mode=profile only
+  "figma_reference_file_key": "string|null",       // mode=profile, optional (B5) — opt-in Figma anchor
   "brand_profile_path": "string",                  // mode=logo only
   "force_generate": "boolean",                     // mode=logo, optional — skip Branch A
   "selected_candidate_id": "string"                // mode=logo, optional — finalize Branch B
@@ -113,6 +114,13 @@ Look for (in order):
 5. Favicon (`/favicon.ico` or `<link rel="shortcut icon">`) — set `is_favicon_only: true`.
 
 Download to `{session_dir}logo/source.{ext}` via `curl -o` (Bash). If WebP/AVIF, convert to PNG via `sharp` or `cairosvg`.
+
+### Figma reference (optional — opt-in, B5)
+
+Run **only** if the payload includes a non-null `figma_reference_file_key` **and** the Figma MCP server is active (`.mcp.json`; see [[figma-mcp]]):
+- Fetch the referenced Figma file via the Figma MCP and read its published **color styles** + **text styles**.
+- Use them as **brand anchors**: if the waterfall produced no confident palette, adopt the Figma colors (set `colors.extraction_method = "figma"`); otherwise record them under a `figma_reference` block for the orchestrator to compare against the scraped palette.
+- This block is **dormant by default** — the orchestrator does not pass `figma_reference_file_key` until a per-vertical design-system file exists, so the standard profile waterfall is unchanged. (Live tool wiring — the exact Figma MCP tool names + the agent `tools:` entry — is finalized once the server is verified running after a Claude Code restart.)
 
 ### Output — brand_profile.json
 

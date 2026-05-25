@@ -6,10 +6,10 @@ Project-level Claude Code settings. Currently holds two sections:
 - **`permissions.allow`** — explicit allowlist for every Bash command the agents and orchestrator legitimately need (every `scripts/*.js`, the realesrgan-ncnn-vulkan binary, `npm install`, common read-only git/ls/mkdir). Reduces permission prompts to near zero during normal `/banner-create` runs without surrendering the safety net for arbitrary commands.
 - **`hooks`** — two events registered (A4, 2026-05-20): a **`Stop`** hook and a **`SessionEnd`** hook, both running `node scripts/sync_vault.js` to mirror the worktree `vault/` into the main repo vault Obsidian opens and auto-commit vault changes (full mechanism in [[vault-sync-hook]]). Phase C2 will *additionally* register a `PostToolUse` hook against the Canva `export-design` MCP tool to run [[validate-export-script]] automatically.
 
-The user-level `.claude/settings.local.json` (gitignored) holds personal overrides — do not touch.
+The user-level `.claude/settings.local.json` (gitignored) holds personal overrides — do not touch. **MCP servers are configured in a separate `.mcp.json` at the repo root, not here** (Figma registered there — see [[figma-mcp]]).
 
 ## Open Questions
-- Should we also pre-register MCP servers (Replicate / Unsplash / Figma) here, or use a separate `.mcp.json`? Deferred until Phase B.
+- ~~Should we pre-register MCP servers (Replicate / Unsplash / Figma) here, or use a separate `.mcp.json`?~~ **Resolved (2026-05-25):** project MCP servers live in `.mcp.json` at the repo root (Figma registered there — see [[figma-mcp]]). `settings.json` does *not* define them, and we deliberately avoid `enabledMcpjsonServers` so the user keeps the manual approval gate for `npx`-launched servers.
 - The realesrgan-ncnn-vulkan binary path is allowlisted by bare name — depends on PATH being set. May need to switch to an absolute-path pattern once installed.
 
 ## Session Log
