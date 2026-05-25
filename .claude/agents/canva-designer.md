@@ -1,6 +1,6 @@
 ---
 name: canva-designer
-description: Designs the EzGo banner+header in Canva. Four phases — directions (3 visual directions, no API calls), backgrounds (3 OpenAI gpt-image pairs + sharp resize), compose (Canva editing transactions + export final PNGs), abort (cancel open transactions). Stateless. RTL strategy — gpt-image renders backgrounds with NO text; Canva native composition adds Hebrew text on top.
+description: Designs the EzGo banner+header in Canva. Four phases — directions (3 visual directions, no API calls), backgrounds (3 image pairs — gpt-image by default, or Flux/Recraft/Ideogram via Replicate when configured — + sharp resize), compose (Canva editing transactions + export final PNGs), abort (cancel open transactions). Stateless. RTL strategy — the image model renders backgrounds with NO text; Canva native composition adds Hebrew text on top.
 model: sonnet
 tools: Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__cancel-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design
 ---
@@ -48,7 +48,8 @@ Key rules from the skills to apply during execution:
   "logo_asset_id": "string|null",                    // from session_state.canva_assets
   "selected_direction": {                            // backgrounds + compose phases
     "id": "a", "name": "...", "description": "...",
-    "palette": ["#hex", "#hex"], "background_keywords": "..."
+    "palette": ["#hex", "#hex"], "background_keywords": "...",
+    "image_model": "gpt-image"
   },
   "selected_pair_set": "a"|"b"|"c",                  // compose phase only
   "regenerate_count": 0,                             // optional
@@ -76,12 +77,12 @@ No API calls. Pure LLM reasoning.
    - **b — Mediterranean Calm**: warm sands, sunset golds, vacation vibe. Palette: `#E8B65A`, `#7C4A2A`. Background: tranquil bay at golden hour.
    - **c — Premium Modern**: dark navy, minimal, elegant. Palette: `#0F1E33`, `#C9A961`. Background: abstract dark gradient with subtle wave geometry.
 
-3. Each direction must have: `id` (a/b/c), `name`, `description` (one sentence), `palette` (2-3 hex), `background_keywords` (string for the gpt-image prompt).
+3. Each direction must have: `id` (a/b/c), `name`, `description` (one sentence), `palette` (2-3 hex), `background_keywords` (string for the image prompt), and `image_model` — the generator best suited to the atmosphere: `"gpt-image"` (default, reliable all-rounder), `"flux"` (photoreal scenes), `"recraft"` (vector / minimal / logo-like), or `"ideogram"` (clean graphic backgrounds). **Until the Replicate token is configured, always emit `"gpt-image"`** — the other three are selectable but fall back to gpt-image at generation time (see Phase backgrounds).
 
 ### Return
 
 ```json
-{"status":"options","phase":"directions","options":[{"id":"a","name":"...","description":"...","palette":["#..","#.."],"background_keywords":"..."},{"id":"b",...},{"id":"c",...}],"summary":"3 visual directions ready"}
+{"status":"options","phase":"directions","options":[{"id":"a","name":"...","description":"...","palette":["#..","#.."],"background_keywords":"...","image_model":"gpt-image"},{"id":"b",...},{"id":"c",...}],"summary":"3 visual directions ready"}
 ```
 
 ---
@@ -121,7 +122,11 @@ Generate 3 background pairs (banner + header) for the selected direction. **6 Op
    Variation cue: {set-specific cue}
    ```
 
-3. Run via Bash, 6 calls total:
+3. **Pick the generator** from `selected_direction.image_model`:
+   - `gpt-image` (default) → `node scripts/openai_image.js` (shown below).
+   - `flux` / `recraft` / `ideogram` → `node scripts/replicate_image.js --model {image_model}` (identical `--prompt` / `--size` / `--out` interface). **`replicate_image.js` does not exist until the Replicate token is configured (B1).** If the script is missing or `REPLICATE_API_TOKEN` is unset, **fall back to `openai_image.js`** and note the fallback in `summary` — never fail the phase over an unavailable model.
+
+   Run via Bash, 6 calls total (gpt-image path shown):
    ```bash
    node scripts/openai_image.js \
      --prompt "$BANNER_PROMPT_A" \

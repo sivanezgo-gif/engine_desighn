@@ -5,7 +5,7 @@ Two Node wrappers around well-known image tools, designed to be used as a **two-
 
 **Canonical pipeline order: rembg FIRST, upscale SECOND.** Reversing the order confuses rembg because Real-ESRGAN's smoothing pass adds soft gradients that look like background to the segmentation model — empirically yields 90%+ transparency (subject erased). The brand-researcher agent will enforce this order in Phase B6.
 
-Status: scripts shipped 2026-05-20 in commit `75a09ca`. Agent wiring (Phase B6 for brand-researcher, Phase B7 for canva-designer) is pending.
+Status: scripts shipped 2026-05-20 in commit `75a09ca`. **Agent wiring landed 2026-05-25** — `brand-researcher` mode=logo Branch A now runs rembg (+ conditional upscale) before the Canva upload (B6); `canva-designer` gained the `image_model` selector (B7, see [[canva-designer-agent]]).
 
 ## Open Questions
 - The `over_removal` warning threshold in `remove_bg.js` defaults to 0.95 (95% transparent). Empirically, "subject erased" cases come in around 90%+. Should we lower the threshold to 0.85 once we have more real-world data?
@@ -27,3 +27,12 @@ Status: scripts shipped 2026-05-20 in commit `75a09ca`. Agent wiring (Phase B6 f
   - rembg has no `__main__` — the Python 3.14 fix is in `scripts/remove_bg.js` line ~92. If we ever upgrade and `python -m rembg` starts working, we can simplify back to `-m`.
   - Both scripts default to behavior that's safe for photo logos (most common case); the brand-researcher will pass `--model` per business_type once Phase B7 lands.
 - **Related:** [[architecture-overview]], [[brand-researcher-agent]], [[canva-designer-agent]], [[claude-settings]], [[openai-image-script]], [[resize-script]]
+
+### 2026-05-25 — B6/B7 agent wiring [shipped]
+- **What was done:** Wired both scripts into the agents. `brand-researcher` mode=logo **Branch A** now runs `remove_bg.js` after PNG conversion and *before* the Canva upload, adopting the cleaned PNG only when `ok:true` with an empty `warnings` array (any `over_removal` / `low_transparency` / `no_alpha_channel` → keep the original). A conditional `upscale.js --scale 2` follows when the working logo's width < 200px. **Branch B** (generated logos) got a rembg safety-net for outputs lacking a real alpha channel. `canva-designer` (B7) is documented in [[canva-designer-agent]].
+- **Decisions:**
+  - **Enhancement lives in `brand-researcher`, not `canva-designer`.** The plan originally placed logo upscale in canva-designer, but that agent only receives an already-uploaded `logo_asset_id` — the local file (the only thing rembg/upscale can act on) exists solely in brand-researcher Branch A, before upload. Corrected during the Stage-2 review.
+  - **Gate on empty `warnings`, keep original on doubt.** rembg never *replaces* the logo unless it is confidently clean — a wrongly-erased logo is worse than an un-cleaned one.
+  - **Never block.** Both enhancements fall back to the prior file on any failure; neither has an API-token dependency, so they run even from the git worktree (where `.env` is absent).
+- **Notes / Caveats:** Re-verified rembg on the spa-ben-ami `source.png` (512×512) from the worktree → `transparent_fraction: 0.224`, no warnings (clean) — the gate adopts it. The `<200px` upscale trigger rarely fires in Branch A (already filtered to ≥200px min dimension); it is a forward-looking safety net. Auto-pick of `realesrgan-x4plus` vs `-anime` per business_type stays deferred (see Open Questions).
+- **Related:** [[brand-researcher-agent]], [[canva-designer-agent]], [[claude-settings]]

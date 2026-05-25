@@ -186,11 +186,21 @@ Read `brand_profile.json` from `brand_profile_path`.
    ```bash
    python3 -c "import cairosvg; cairosvg.svg2png(url='{logo.local_path}', write_to='{session_dir}logo/source.png', output_width=512)"
    ```
-3. Upload to Canva:
+3. **Background cleanup (rembg)** — strip any stray white / incorrect background so the logo composites cleanly over the banner. No API token needed (local Python), so this runs even from the worktree:
+   ```bash
+   node scripts/remove_bg.js --input {session_dir}logo/source.png --output {session_dir}logo/source_nobg.png
+   ```
+   Parse the JSON line. Adopt `source_nobg.png` as the **working logo** only if `ok:true` **and** `warnings` is empty. If there is any warning (`over_removal` = subject erased, `low_transparency` = background wasn't really removed, `no_alpha_channel` = failed) or `ok:false`, **keep `source.png`** — rembg didn't help here.
+4. **Conditional upscale** — if the working logo's width < 200px (check `logo.dimensions[0]`, or `node -e "require('sharp')('{f}').metadata().then(m=>console.log(m.width))"`), upscale ×2 so it stays crisp:
+   ```bash
+   node scripts/upscale.js --input {working_logo} --output {session_dir}logo/source_2x.png --scale 2
+   ```
+   On `ok:true` adopt `source_2x.png`; on failure fall back to the un-upscaled file. Never block on an enhancement failure. (Branch A already filters logos to ≥200px min dimension, so this is mostly a safety net for borderline / favicon-derived logos.)
+5. Upload the final working logo to Canva:
    - Use `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url`.
-   - **D2 spike:** if MCP rejects `file://` URLs, host a tiny local file server first (Bash: `python3 -m http.server 8765 &` from `{session_dir}logo/` then use `http://localhost:8765/source.png`; kill server after upload).
-4. Capture `logo_asset_id` from the response.
-5. Update `brand_profile.json`: set `logo.canva_asset_id`, `logo.local_path`.
+   - **D2 spike:** if MCP rejects `file://` URLs, host a tiny local file server first (Bash: `python3 -m http.server 8765 &` from `{session_dir}logo/` then use `http://localhost:8765/{final_filename}`; kill server after upload).
+6. Capture `logo_asset_id` from the response.
+7. Update `brand_profile.json`: set `logo.canva_asset_id`, `logo.local_path` (the final working file), and add `logo.cleaned` (bool — rembg adopted) + `logo.upscaled` (bool) for traceability.
 
 **Return:**
 ```json
@@ -217,6 +227,7 @@ Read `brand_profile.json` from `brand_profile_path`.
 **Triggered when:** `selected_candidate_id` is set (orchestrator passing user's choice back).
 1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate` with the selected candidate id → get a design id with a downloadable URL.
 2. Download the resulting PNG to `{session_dir}logo/generated_options/chosen.png`.
+2b. **Optional rembg safety net** — generated logos request a transparent background, but if the PNG lacks a real alpha channel (`node -e "require('sharp')('{session_dir}logo/generated_options/chosen.png').metadata().then(m=>console.log(m.hasAlpha))"` → `false`), run `node scripts/remove_bg.js --input chosen.png --output chosen_nobg.png`; if `ok:true` with no `over_removal` / `no_alpha_channel` warning, replace `chosen.png` with the cleaned file so the downstream EXIF + upload steps stay unchanged.
 3. Embed EXIF disclosure via Bash:
    ```bash
    exiftool -overwrite_original \
