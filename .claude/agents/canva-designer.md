@@ -2,7 +2,7 @@
 name: canva-designer
 description: Designs the EzGo banner+header in Canva. Four phases — directions (3 visual directions, no API calls), backgrounds (3 image pairs — gpt-image by default, or Flux/Recraft/Ideogram via Replicate when configured — + sharp resize), compose (3 banner variants v1_balanced/v2_bold/v3_minimal + header via Canva editing transactions, each validated via validate_export.js), abort (cancel open transactions). Stateless. RTL strategy — the image model renders backgrounds with NO text; Canva native composition adds Hebrew text on top.
 model: sonnet
-tools: Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__cancel-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design
+tools: Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__cancel-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design
 ---
 
 # Canva Designer — Sub-Agent 3
@@ -198,52 +198,41 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url
 
 Save returned `banner_bg_asset_id` and `header_bg_asset_id`.
 
-### Step 5c — Create the Canva designs
+### Step 5c — Create the Canva designs (✅ verified live 2026-06-04)
 
-Create **one header design** and **three banner designs** — one per variant (`v1_balanced`, `v2_bold`, `v3_minimal`). Keeping the three banners as separate designs avoids stacking elements between variants and gives each its own edit URL. **All three banners reuse the same `banner_bg_asset_id`, so there is no extra image generation** (C2's cost saving).
+There is **no** "blank design at a custom size" tool, and `generate-design-structured` is **presentations-only**. The working, verified path (per design):
+1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` with a **fixed `design_type`** (no custom size) and a brand-specific `query` → returns `job.id` + **4 candidates** (`job.result.generated_designs[].candidate_id`). Use a vertical type for the banner (e.g. `poster` / `your_story`) and a wide type for the header (e.g. `facebook_cover`). The `query` must describe the vertical + palette + atmosphere **and** that it carries a short headline near the top — you will *replace* that headline, so the design must already contain a headline text element.
+2. `create-design-from-candidate(job_id, candidate_id)` → a real `design_id`.
+3. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design(design_id, { type:"custom", width, height })` → **returns a NEW `design_id`** at the exact target (310×600 / 1366×200). Use the resized id from here on. `resize-design` **does** support custom W×H.
 
-**How to create a design at the target size** — ⚠️ corrected 2026-06-04, **not yet verified end-to-end**:
+**3 variants (C2):** `generate-design` returns 4 candidates — materialise **3** of them (each → create-from-candidate → resize) as `v1_balanced` / `v2_bold` / `v3_minimal`. Three different Canva layouts of one brief is a stronger set than three restylings of one design. (Alternative: `copy-design` one resized banner ×3 and restyle.) No extra OpenAI image generation either way.
 
-There is **no** "create a blank design at a custom size" Canva tool, and `generate-design-structured` is **presentations-only** (it can NOT make a 310×600 banner — the earlier "spike order" here was wrong). The real building blocks:
-1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` → design **candidates** for a fixed `design_type` (no custom size). Use a vertical type for the banner (e.g. `your_story`) and a wide type for the header.
-2. `create-design-from-candidate` → materialise a chosen candidate into a real `design_id`. **⚠️ this tool is NOT yet in this agent's `tools:` frontmatter — add it before this path can run** (brand-researcher already has it, for logos).
-3. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design(design_id, { type:"custom", width, height })` → resize to the exact target (310×600 / 1366×200). `resize-design` **does** support custom W×H.
-4. Optionally `copy-design` to clone one resized banner into the 3 variant designs (cheaper than generating 3×).
+Capture the resized `header_design_id` and the three resized banner `design_id`s.
 
-Your own `set_background` (Step 5d) overwrites whatever AI content the candidate started with. **This create→resize→compose flow has not been run live — confirm on the first real `/banner-create` and adjust** (tracked in TODO.md).
+### Step 5d — Compose by editing the generated design (✅ verified live 2026-06-04)
 
-Capture `header_design_id` and a `banner_design_id` for each of the three variants.
+⚠️ **The Canva MCP has NO `set_background` and NO `add_text` op.** You **edit the elements the generated design already has.** `start-editing-transaction(design_id)` returns the structure: `richtexts[]` (text elements, each with `element_id` + current text), `fills[]` (image elements, each with `element_id` + `asset_id`), and `pages[]` (note each page's `is_responsive`). Then drive `perform-editing-operations` (pass back `transaction_id`, `page_index`, and the `pages` array), and finally `commit-editing-transaction` (changes are DRAFT until committed):
 
-### Step 5d — Compose the header + 3 banner variants (C2)
+```
+- { type:"replace_text",   element_id:<headline text element>, text:"{headline}" }        # RTL Hebrew verified
+- { type:"format_text",    element_id:<same>, formatting:{ color:"{hex}", font_size:{n}, text_align:"center" } }
+- { type:"delete_element", element_id:<sub-headline> }                                     # or replace_text it — avoid clashes
+- { type:"update_fill",    element_id:<bg image element>, asset_type:"image", asset_id:"{banner_bg_asset_id}", alt_text:"background" }   # to use OUR gpt-image bg
+- { type:"insert_fill",    page_id:<page_id>, asset_type:"image", asset_id:"{logo_asset_id}", top:_, left:_, width:_, height:_ }         # banner logo only
+```
 
-Read `chosen_copy.json` (`headline`, `language`, `direction`). The three variants share **one background and one headline** but are **three genuine design takes** — they differ in typographic weight, colour, and breathing room (not random noise):
+The three variants differ by `format_text` + element position/size, each on its **own** resized design:
 
 | Variant | Headline size | Colour | Position / space | Logo |
 |---------|---------------|--------|------------------|------|
-| `v1_balanced` | base | auto-contrast | lower-third, centred | top corner, ≤30% width |
-| `v2_bold` | **+15%** | accent `palette[1]` (must still pass contrast §2) | upper-third, fills more width | bottom, ≤25% width |
-| `v3_minimal` | **−10%** | auto-contrast, single colour | centred, generous margins | small ≤20% width, or omit for max calm |
+| `v1_balanced` | base | auto-contrast | centred | top corner, ≤30% width |
+| `v2_bold` | **+15%** | accent `palette[1]` (re-check contrast §2) | upper area | bottom, ≤25% width |
+| `v3_minimal` | **−10%** | auto-contrast, single colour | centred, generous margins | small ≤20%, or omit |
 
-**Header** — compose once, no variants, **no logo**:
-```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction(design_id: header_design_id)
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations:
-  operations:
-    - set_background: { asset_id: {header_bg_asset_id} }
-    - add_text: { text: "{headline}", direction: "{rtl|ltr}", font_family: "{brand_profile.fonts[0] or 'Heebo' if rtl else 'Inter'}", position: "center", color: "auto-contrast" }
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction
-```
-
-**Each banner variant** — loop the three rows above, each on its **own** `banner_design_id`, all using the **same** `banner_bg_asset_id`:
-```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction(design_id: {this variant's banner_design_id})
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations:
-  operations:
-    - set_background: { asset_id: {banner_bg_asset_id} }     # same asset for all 3 — no new generation
-    - add_text:  { text: "{headline}", direction: "{rtl|ltr}", font_family: "{font}", size: "{per-variant}", position: "{per-variant}", color: "{per-variant}" }
-    - add_image: { asset_id: {logo_asset_id}, position: "{opposite of text}", max_width_pct: {per-variant} }   # skip if no logo, or if v3_minimal omits it
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction
-```
+**Header:** same flow, **no logo**. **Known constraints (from the live test):**
+- **`font_family` is NOT settable** via `format_text` (only size / weight / style / colour) — you inherit the candidate's font. Pick a candidate whose font suits the brand; don't promise a specific brand font.
+- **Text reflow:** a longer headline grows the element and can overlap neighbours (seen live — the Hebrew headline overran the sub-headline). After `replace_text`, read the returned `dimension` and use `position_element` / `resize_element`, or delete the clashing sub-headline.
+- `update_fill` (our bg) + `insert_fill` (logo) were **not** yet exercised live — verify on the first real run. `is_responsive:true` pages restrict ops to update_title/replace_text/update_fill/delete_element/find_and_replace_text; the resized `poster` was `is_responsive:false` (full ops).
 
 ### Step 5e — Export
 
