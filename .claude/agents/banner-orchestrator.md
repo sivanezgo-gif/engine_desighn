@@ -55,6 +55,8 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
        "header_design_id": null
      },
      "openai_call_count": 0,
+     "similar_clients": [],
+     "validation_results": null,
      "abort_reason": null
    }
    ```
@@ -69,6 +71,13 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
      - "התחל מחדש (השאר ישן)" → new session, leave old as-is
      - "התחל מחדש ובטל ישן" → mark old as ABORTED, start fresh
    ```
+7. **Seed the brand registry (C4):** initialise the cross-session SQLite registry and register this run. All three commands upsert, so they are safe to re-run on resume:
+   ```bash
+   node scripts/brand_db.js init
+   node scripts/brand_db.js insert-client  --slug "{business_slug}" --name "{business_name}" --url "{url}"
+   node scripts/brand_db.js insert-session --session-id "{session_id}" --client-slug "{business_slug}" --status active
+   ```
+   `insert-client` here carries only slug + name + url; `business_type` and the palette are filled in after Gate 1.
 
 ---
 
@@ -92,6 +101,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    • לוגו: {logo.found ? 'נמצא' : 'לא נמצא'}
    • מקורות: {research_sources}
    • טון: {tone}
+   {similar_clients.length ? '⚠ הפלטה דומה מאוד ללקוח קיים: ' + similar_clients[0].client_name + ' (ΔE ' + similar_clients[0].delta_e + '). שקלי לשנות גוון כדי לא להידמות.' : ''}
 
    מאשרת?"
    ```
@@ -99,7 +109,15 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    - "מאשרת — המשך"
    - "לתקן שדה" → ask user which field, edit `brand_profile.json` directly via Edit tool, re-confirm.
    - "להפעיל שוב מחקר" → re-invoke brand-researcher.
-5. On accept → update `session_state.last_completed_step = "skill1"`, append log line, continue to Phase 2.
+5. On accept:
+   - **Record the brand (C4):** upsert the client's `business_type` and store its palette so future clients can be compared against it:
+     ```bash
+     node scripts/brand_db.js insert-client  --slug "{business_slug}" --name "{business_name}" --url "{url}" --type "{business_type}"
+     node scripts/brand_db.js insert-palette --client-slug "{business_slug}" --hex "{colors.primary}" --role primary
+     # only if a secondary colour exists:
+     node scripts/brand_db.js insert-palette --client-slug "{business_slug}" --hex "{colors.secondary}" --role secondary
+     ```
+   - Update `session_state.last_completed_step = "skill1"`, copy `brand_profile.similar_clients` into `session_state.similar_clients`, append a log line, and continue to Phase 2.
 
 ---
 
@@ -146,8 +164,16 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    ```json
    {"status":"options","options":[{"id":1,"text":"...","style":"direct"},{"id":2,"text":"...","style":"emotional"},{"id":3,"text":"...","style":"adventurous"}]}
    ```
-3. **Gate 3** via AskUserQuestion (4 options): 3 headlines + "להפיק 3 חדשות".
-4. On select: invoke copywriter again with `mode:"finalize"` and `selected_index`. Updates `chosen_copy.json`.
+2b. **Duplicate-headline check (C4):** for each of the 3 candidate texts, query the registry for a near-identical headline already used in the same vertical:
+   ```bash
+   node scripts/brand_db.js find-duplicate-headline --text "{candidate_text}" --language "{language}" --business-type "{business_type}" --threshold 0.7
+   ```
+   If `ok:true` with a non-empty `matches` array for a candidate, mark it `duplicate_risk` and keep the closest `existing_text` + `client_name`. `ok:false` (empty registry) → no risk. Never block on this.
+3. **Gate 3** via AskUserQuestion (4 options): 3 headlines + "להפיק 3 חדשות". For any candidate flagged `duplicate_risk`, append a short Hebrew marker to its option description, e.g. `⚠ דומה ל'{existing_text}' ({client_name})`, so the user chooses with eyes open.
+4. On select: invoke copywriter again with `mode:"finalize"` and `selected_index` (updates `chosen_copy.json`). Then record the chosen headline in the registry:
+   ```bash
+   node scripts/brand_db.js insert-headline --client-slug "{business_slug}" --session-id "{session_id}" --text "{chosen_headline}" --style "{chosen_style}" --language "{language}"
+   ```
 5. Update `session_state.last_completed_step = "skill3"`.
 
 ---
@@ -181,17 +207,20 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
 ### Phase 4c — Compose & Export
 
 1. Invoke `canva-designer` (`phase=compose`) with `selected_pair_set`.
-2. Apply `state_patch` (canva_assets IDs).
-3. Expected: `{status:"ok", artifacts:{banner_final,header_final,banner_design_id,header_design_id,banner_edit_url,header_edit_url}}`.
-4. Read final PNGs and verify dimensions via Bash:
-   ```bash
-   node -e "const sharp=require('sharp');sharp(process.argv[1]).metadata().then(m=>console.log(m.width+'x'+m.height))" ./output/{session_id}/final/banner_310x600.png
-   ```
+2. Apply `state_patch` (canva_assets IDs + `validation_results`).
+3. Expected: `{status:"ok", artifacts:{banner_final,header_final,banner_design_id,header_design_id,banner_edit_url,header_edit_url}, validation:{pass,banner,header}}`. The sub-agent already ran `validate_export.js` on both finals (dimensions + blank + contrast + logo + legibility), so you do **not** re-check dimensions here.
+4. **Surface validation (C1):** if `validation.pass === false`, the remaining failures are *soft* (contrast / busy background / logo size — a hard dimension/blank failure would have come back as `status:"fail"`, which you handle as a recompose). List the soft warnings to the user in Hebrew before the gate, e.g. `⚠ ביקורת איכות: ניגודיות 3.1:1 באזור הכותרת (מומלץ ≥3:1 לטקסט גדול)`.
 5. **Gate 4c** via AskUserQuestion: "העיצוב מוכן! לאשר?"
    - "מושלם" → done.
    - "להפיק שוב" → re-invoke compose.
    - "חזור לבחירת רקע" → back to Phase 4b.
-6. Update `last_completed_step = "done"`, `status = "completed"`.
+6. On accept — **record the exported assets and close the session (C4):**
+   ```bash
+   node scripts/brand_db.js insert-asset --client-slug "{business_slug}" --session-id "{session_id}" --type banner --path "./output/{session_id}/final/banner_310x600.png" --canva-id "{banner_design_id}"
+   node scripts/brand_db.js insert-asset --client-slug "{business_slug}" --session-id "{session_id}" --type header --path "./output/{session_id}/final/header_1366x200.png" --canva-id "{header_design_id}"
+   node scripts/brand_db.js finish-session --session-id "{session_id}" --status completed --openai-calls {openai_call_count}
+   ```
+   Then update `last_completed_step = "done"`, `status = "completed"`.
 
 ---
 
@@ -240,7 +269,10 @@ If the user types `/abort`, ESC, or asks to cancel at any gate:
    ```
 2. Rename folder: `mv ./output/{session_id} ./output/{session_id}-ABORTED`.
 3. Write `./output/{session_id}-ABORTED/abort_reason.txt` with timestamp + user-provided reason (or "user_initiated").
-4. Set `session_state.status = "aborted"`, `abort_reason = "..."`.
+4. Set `session_state.status = "aborted"`, `abort_reason = "..."`, and mark it in the registry (C4):
+   ```bash
+   node scripts/brand_db.js finish-session --session-id "{session_id}" --status aborted
+   ```
 5. Print: "ה-session בוטל. הקבצים נשמרו ב-`./output/{session_id}-ABORTED/`."
 
 ---

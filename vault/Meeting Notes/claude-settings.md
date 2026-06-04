@@ -4,7 +4,7 @@
 Project-level Claude Code settings. Currently holds two sections:
 
 - **`permissions.allow`** — explicit allowlist for every Bash command the agents and orchestrator legitimately need (every `scripts/*.js`, the realesrgan-ncnn-vulkan binary, `npm install`, common read-only git/ls/mkdir). Reduces permission prompts to near zero during normal `/banner-create` runs without surrendering the safety net for arbitrary commands.
-- **`hooks`** — two events registered (A4, 2026-05-20): a **`Stop`** hook and a **`SessionEnd`** hook, both running `node scripts/sync_vault.js` to mirror the worktree `vault/` into the main repo vault Obsidian opens and auto-commit vault changes (full mechanism in [[vault-sync-hook]]). Phase C2 will *additionally* register a `PostToolUse` hook against the Canva `export-design` MCP tool to run [[validate-export-script]] automatically.
+- **`hooks`** — three events registered: a **`Stop`** hook and a **`SessionEnd`** hook (A4, 2026-05-20), both running `node scripts/sync_vault.js` to mirror the worktree `vault/` into the main repo vault Obsidian opens and auto-commit vault changes (full mechanism in [[vault-sync-hook]]); and a **`PostToolUse`** hook (matcher `export-design`, C1 2026-06-04) running `node scripts/validate_export.js --hook` as a metadata-free safety net after every Canva export (see [[validate-export-script]]).
 
 The user-level `.claude/settings.local.json` (gitignored) holds personal overrides — do not touch. **MCP servers are configured in a separate `.mcp.json` at the repo root, not here** (Figma registered there — see [[figma-mcp]]).
 
@@ -25,3 +25,9 @@ The user-level `.claude/settings.local.json` (gitignored) holds personal overrid
 - **Decisions:** Registered **both** events per the user's request — `Stop` gives live updates, `SessionEnd` guarantees a final sync. Used the relative `node scripts/sync_vault.js` (hooks run with cwd = project root, so no `$CLAUDE_PROJECT_DIR` needed — keeps it cross-platform on Windows).
 - **Notes / Caveats:** Hooks edited mid-session may only activate after a Claude Code restart; verified the script independently by running it manually. The script always exits 0, so a sync failure can never block the conversation. The Phase C2 `PostToolUse` validation hook is still pending.
 - **Related:** [[vault-sync-hook]], [[architecture-overview]], [[sqlite-brand-registry]]
+
+### 2026-06-04 — C1: PostToolUse validation hook [shipped]
+- **What was done:** Registered the third hook event — `PostToolUse` with matcher `export-design` → `node scripts/validate_export.js --hook`. `validate_export.js` was already in the allowlist (added during Phase A planning), so no permissions change was needed.
+- **Decisions:** Matcher is the bare substring `export-design` (regex), not the full `mcp__<uuid>__export-design`, so the hook keeps matching if the Canva connector's server id changes. The hook is a metadata-free safety net (dimensions + blank only); the rich contrast / logo / legibility checks run in the `canva-designer` compose step where the text colour + placement are known.
+- **Notes / Caveats:** The hook script always exits 0 on an internal error (exit 2 only on a genuine hard failure), so it can't break the conversation. Live behaviour against a real Canva export still to be confirmed end-to-end (Canva MCP was offline during the build).
+- **Related:** [[validate-export-script]], [[canva-designer-agent]], [[vault-sync-hook]]

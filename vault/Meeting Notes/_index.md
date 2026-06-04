@@ -13,7 +13,7 @@ Technical documentation for every code, agent, command, script, and config file 
 - [[gitignore-config]] — .gitignore rules (secrets, output, deps)
 - [[env-example]] — environment variable template (.env.example)
 - [[claude-settings]] — `.claude/settings.json` permissions allowlist + Stop/SessionEnd vault-sync hooks
-- [[figma-mcp]] — `.mcp.json` Figma MCP server (Framelink, PAT-based; manual approval on restart)
+- [[figma-mcp]] — Figma MCP: official OAuth connector (live, verified 2026-06-04) + Framelink `.mcp.json` PAT fallback (dormant)
 
 ### Agents (`.claude/agents/`)
 - [[banner-orchestrator-agent]] — main orchestrator, owns gates and session state
@@ -27,6 +27,7 @@ Technical documentation for every code, agent, command, script, and config file 
 ### Scripts (`scripts/`)
 - [[openai-image-script]] — gpt-image-2 background generation CLI
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
+- [[validate-export-script]] — C1 export quality gate (WCAG contrast / logo size / legibility / dimensions; CLI + PostToolUse hook)
 - [[image-enhancement-scripts]] — rembg (background removal) + Real-ESRGAN (upscaling) pipeline for logos
 - [[vault-sync-hook]] — Obsidian auto-sync: mirror worktree vault→main + auto-commit (Stop/SessionEnd hooks)
 

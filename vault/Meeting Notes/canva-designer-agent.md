@@ -1,7 +1,7 @@
 # canva-designer agent
 
 ## Overview
-Sub-agent 3 at `.claude/agents/canva-designer.md`. Four phases: `directions` (3 visual directions, no API calls — pure LLM); `backgrounds` (3 image pairs of banner 1024×1984 + header 2304×800, with the mandatory central-third sentence for header prompts; the per-direction `image_model` field selects the generator — `gpt-image` via `scripts/openai_image.js` by default, or `flux`/`recraft`/`ideogram` via `scripts/replicate_image.js` once the Replicate token lands, falling back to gpt-image meanwhile); `compose` (sharp resize via `scripts/resize.js` → Canva upload → editing transactions → export); `abort` (cancels open Canva editing transactions). Stateless. Reads [[visual-design-principles-skill]] and [[marketing-thinking-skill]] before each phase. Tools: 10 Canva MCP tools + `Read, Write, Bash`.
+Sub-agent 3 at `.claude/agents/canva-designer.md`. Four phases: `directions` (3 visual directions, no API calls — pure LLM); `backgrounds` (3 image pairs of banner 1024×1984 + header 2304×800, with the mandatory central-third sentence for header prompts; the per-direction `image_model` field selects the generator — `gpt-image` via `scripts/openai_image.js` by default, or `flux`/`recraft`/`ideogram` via `scripts/replicate_image.js` once the Replicate token lands, falling back to gpt-image meanwhile); `compose` (sharp resize via `scripts/resize.js` → Canva upload → editing transactions → export → validate via `scripts/validate_export.js`, see [[validate-export-script]]); `abort` (cancels open Canva editing transactions). Stateless. Reads [[visual-design-principles-skill]] and [[marketing-thinking-skill]] before each phase. Tools: 10 Canva MCP tools + `Read, Write, Bash`.
 
 ## Open Questions
 - D2 — local file upload to Canva (see [[brand-researcher-agent]]).
@@ -20,3 +20,8 @@ Sub-agent 3 at `.claude/agents/canva-designer.md`. Four phases: `directions` (3 
 - **Decisions:** **Mandatory gpt-image fallback.** Until the Replicate token + `replicate_image.js` exist, the directions phase always emits `gpt-image`, and backgrounds falls back to gpt-image (noting it in `summary`) if `replicate_image.js` is missing or `REPLICATE_API_TOKEN` is unset — the pipeline can never break over an unavailable model.
 - **Notes / Caveats:** `replicate_image.js` will mirror `openai_image.js`'s `--prompt`/`--size`/`--out` interface, so routing is a one-line script swap. Logo upscale was *not* added here — it lives in [[brand-researcher-agent]] Branch A (corrected in Stage-2 review).
 - **Related:** [[brand-researcher-agent]], [[image-enhancement-scripts]], [[openai-image-script]], [[banner-orchestrator-agent]]
+
+### 2026-06-04 — C1: compose validation gate [shipped]
+- **What was done:** `compose` Step 5e.1 now runs `scripts/validate_export.js` on each downloaded final (replacing the old inline `node -e` dimension check), passing the headline colour + approximate text/logo regions + `--large-text`. The return envelope gained a `validation` object (checks + warnings) so the orchestrator can surface soft issues at Gate 4c.
+- **Decisions:** Hard failures (wrong dimensions / blank export) → `status:"fail"` (recompose). Soft failures (contrast / busy bg / logo size) → surfaced, not blocked. The rich checks live here because only this agent knows the text colour and placement; a PostToolUse hook on `export-design` is a metadata-free safety net only.
+- **Related:** [[validate-export-script]], [[banner-orchestrator-agent]]

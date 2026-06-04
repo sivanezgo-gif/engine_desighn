@@ -104,6 +104,21 @@ If a logo image is also available, prefer the logo's dominant non-grayscale colo
 
 **Generic-color flag:** if `primary` is one of `#3399ff` / `#4dc4ff` / `#1e90ff` / `#87ceeb` (sky blues) or `#228b22` / `#90ee90` / `#3cb371` (generic greens) within ΔE ≈ 15, set `colors.needs_user_confirmation = true`.
 
+### Cross-session palette check (C4)
+
+Once you have a confident `primary` (and `secondary` if found), check whether an **earlier EzGo client already uses a near-identical palette** — so the orchestrator can warn the user against two venues looking the same. The brand registry already ships the ΔE76 math; you only call it (you have `Bash`):
+
+```bash
+node scripts/brand_db.js find-similar-palette --hex "{primary}" --threshold 10
+```
+
+Parse the single JSON line:
+- `ok:true` with a non-empty `matches` array → copy it into `brand_profile.similar_clients` (each entry kept as `{client_slug, client_name, color_hex, role, delta_e}`, already sorted nearest-first by the script).
+- `ok:true` with `matches: []` → set `similar_clients: []`.
+- `ok:false` (registry not created yet / empty) → **do not fail**; set `similar_clients: []` and continue. This check is advisory only — never block the profile on it.
+
+If a `secondary` exists you may run a second lookup and merge unique clients, keeping the 5 nearest overall. If `similar_clients` ends up non-empty, mention it in the return `summary` (e.g. `⚠ palette close to '{client_name}' (ΔE {delta_e})`) so the orchestrator surfaces it before compose.
+
 ### Logo extraction
 
 Look for (in order):
@@ -160,9 +175,14 @@ Schema (PRD v2.0 §11.1):
   "background_proposal": {
     "type": "image|gradient|solid",
     "description": "..."
-  }
+  },
+  "similar_clients": [
+    { "client_slug": "...", "client_name": "...", "color_hex": "#hex", "role": "primary", "delta_e": 0.0 }
+  ]
 }
 ```
+
+`similar_clients` is `[]` when no earlier client has a palette within ΔE 10 (see **Cross-session palette check** above).
 
 Write to `{session_dir}brand_profile.json` via Write tool.
 

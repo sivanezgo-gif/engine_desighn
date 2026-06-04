@@ -1,14 +1,14 @@
 # SQLite Brand Registry
 
 ## Overview
-A single SQLite file (`output/brands.db`, accessed via Node's built-in `node:sqlite`) is the cross-session brand memory for the EzGo banner generator. It stores clients, sessions, palettes (with perceptual color similarity via CIE LAB ΔE76), headlines (with Jaccard token similarity), and exported assets. Two scripts compose the layer: `scripts/brand_db.js` (10-subcommand CLI returning single-line JSON) and `scripts/migrate_existing_sessions.js` (idempotent importer for legacy `output/{session_id}/` folders). The orchestrator and sub-agents will query this registry in Phase C5 to warn about palette reuse across clients and detect duplicate headlines — raising overall brand consistency without manually maintaining a brand bible.
+A single SQLite file (`output/brands.db`, accessed via Node's built-in `node:sqlite`) is the cross-session brand memory for the EzGo banner generator. It stores clients, sessions, palettes (with perceptual color similarity via CIE LAB ΔE76), headlines (with Jaccard token similarity), and exported assets. Two scripts compose the layer: `scripts/brand_db.js` (10-subcommand CLI returning single-line JSON) and `scripts/migrate_existing_sessions.js` (idempotent importer for legacy `output/{session_id}/` folders). The orchestrator and sub-agents query this registry (C4, 2026-06-04) to warn about palette reuse across clients and detect duplicate headlines — raising overall brand consistency without manually maintaining a brand bible.
 
-Status: foundation shipped 2026-05-20 (commit `dbf56c5`). Wiring into `brand-researcher` and `copywriter` agents is deferred to Phase C5.
+Status: foundation shipped 2026-05-20 (commit `dbf56c5`); live wiring landed 2026-06-04 (C4) — `brand-researcher` computes `similar_clients`, and the orchestrator records clients / palettes / headlines / assets and surfaces both warnings. (The duplicate-headline check sits in the orchestrator, not `copywriter`.)
 
 ## Open Questions
 - ΔE76 threshold for "this palette is too similar to an existing client" — current default 10, may need vertical-specific tuning (spa vs marine vs adventure).
 - Jaccard threshold for headline duplication — current default 0.7; needs real-world calibration once 5+ clients exist.
-- Should `/banner-create` itself insert into `brand_db.js` at end of each successful session (live registration), eliminating the manual `migrate_existing_sessions.js` step entirely? Deferred to Phase C5.
+- ~~Should `/banner-create` insert into `brand_db.js` live at the end of each session?~~ **Resolved (2026-06-04, C4):** yes — the orchestrator seeds the registry at Phase 0 (`init` + client + session) and records palette / headline / assets at each gate, finishing on completion/abort. `migrate_existing_sessions.js` remains only for back-filling legacy folders.
 - `output/brands.db` is gitignored — each dev has their own local registry. If the team ever wants shared brand intelligence, this becomes a Supabase/Postgres decision later.
 
 ## Session Log
@@ -25,3 +25,9 @@ Status: foundation shipped 2026-05-20 (commit `dbf56c5`). Wiring into `brand-res
   - Verified: `find-similar-palette --hex "#EAD8D8"` returns the existing `#E9DEDE` at ΔE=3.04 (visually very close, as expected — pinkish-beige neighbors). `find-duplicate-headline` returns Jaccard 1.0 for exact match and 0.5 for "פנקי עצמך היום" vs "פנקי את עצמך" (3 of 5 unique tokens overlap).
   - `better-sqlite3` was initially in the plan; install failed locally for lack of Visual Studio Build Tools. Switched to `node:sqlite` mid-implementation — same API, zero deps.
 - **Related:** [[architecture-overview]], [[env-example]], [[openai-image-script]], [[resize-script]], [[brand-researcher-agent]], [[copywriter-agent]]
+
+### 2026-06-04 — C4: cross-session wiring landed [shipped]
+- **What was done:** Wired the registry into the live workflow. `brand-researcher` mode=profile calls `find-similar-palette` and writes `similar_clients` into `brand_profile.json`. The orchestrator: seeds the registry at Phase 0 (`init` + `insert-client` + `insert-session active`); on Gate 1 accept upserts `business_type` + `insert-palette`; at Gate 3 runs `find-duplicate-headline` on the 3 candidates and surfaces `duplicate_risk`, then `insert-headline` on finalize; at Gate 4c `insert-asset` ×2 + `finish-session completed`; abort → `finish-session aborted`.
+- **Decisions:** **Duplicate-headline check moved from `copywriter` to the orchestrator** — copywriter stays a pure `Read,Write` LLM agent (no Bash), and the warning surfaces exactly at the headline gate. The palette warning surfaces in the Gate 1 brand summary. All reads tolerate `ok:false` (empty registry) → no warning, never block.
+- **Notes / Caveats:** Smoke-tested the full command sequence against a throwaway DB: `#E8DDDD` matched the seeded `#E9DEDE` at ΔE 0.35; navy `#0A4C8B` correctly returned no match; an exact headline matched at Jaccard 1.0. The registry only accumulates from completed runs going forward; `migrate_existing_sessions.js` still seeds legacy sessions.
+- **Related:** [[brand-researcher-agent]], [[banner-orchestrator-agent]], [[copywriter-agent]], [[validate-export-script]]

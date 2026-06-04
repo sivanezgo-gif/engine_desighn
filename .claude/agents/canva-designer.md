@@ -239,12 +239,33 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: header_desig
   → curl to {session_dir}final/header_1366x200.png
 ```
 
-After download, re-assert dimensions:
+### Step 5e.1 — Automated validation gate (C1)
+
+Run `scripts/validate_export.js` on each downloaded final PNG. It re-asserts the exact dimensions, detects a blank/flat export, and — using the text colour you chose and the region where you placed the headline — measures WCAG contrast, logo size, and how "busy" the background is under the text. This replaces the old inline dimension check.
+
+Derive the arguments from how you actually composed each design:
+- `--text-color` — the hex you used for the headline (light, e.g. `#FFFFFF`, on a dark background; dark, e.g. `#111111`, on a light one).
+- `--text-region "x,y,w,h"` — the approximate pixel box of the headline. Banner (310×600): `center` ≈ `10,210,290,180`, `lower-third` ≈ `10,400,290,180`. Header (1366×200): ≈ `40,55,900,95` (or wherever you placed it). Repeatable if you have more than one text block.
+- `--logo-region "x,y,w,h"` — **banner only**, if a logo was added (a top logo at ~35% width ≈ `100,20,108,90`). Omit for the header.
+- `--large-text` — always pass for these display-size headlines (uses the WCAG AA-large 3:1 threshold).
+
 ```bash
-node -e "const sharp=require('sharp');Promise.all([sharp('{banner}').metadata(),sharp('{header}').metadata()]).then(([b,h])=>{if(b.width!==310||b.height!==600||h.width!==1366||h.height!==200){console.error('DIM_MISMATCH');process.exit(1)}})"
+node scripts/validate_export.js \
+  --input {session_dir}final/banner_310x600.png --kind banner \
+  --text-color "{headline_hex}" --text-region "{banner_text_box}" \
+  --logo-region "{banner_logo_box}" --large-text
+
+node scripts/validate_export.js \
+  --input {session_dir}final/header_1366x200.png --kind header \
+  --text-color "{headline_hex}" --text-region "{header_text_box}" --large-text
 ```
 
-If mismatch → return `status: "fail"` with error.
+Interpret each JSON result:
+- **exit 1 / `hardFail:true`** (wrong dimensions or a blank export) → the export is broken. Return `status:"fail"` with the failing check in `error`.
+- **`pass:false` with only `severity:"soft"` failures** (low contrast / busy background / oversized logo) → do **not** fail the phase. Surface them: put the merged `checks` + `warnings` into a `validation` object in your return envelope so the orchestrator can show the user at Gate 4c and let them decide whether to accept or recompose.
+- **`pass:true`** → set `validation.pass = true`.
+
+(The same script also fires automatically as a PostToolUse hook on `export-design` — a metadata-free safety net that catches wrong-dimension / blank exports even if this step is skipped. The rich contrast / logo / legibility checks happen **only here**, because only you know the text colour and where you placed everything.)
 
 ### Step 5f — Get edit URLs
 
@@ -267,15 +288,21 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_i
     "banner_edit_url":"https://canva.com/...",
     "header_edit_url":"https://canva.com/..."
   },
+  "validation":{
+    "pass":true,
+    "banner":{"checks":[/* checks[] from validate_export.js banner run */],"warnings":[]},
+    "header":{"checks":[/* checks[] from validate_export.js header run */],"warnings":[]}
+  },
   "state_patch":{
     "canva_assets":{
       "banner_bg_asset_id":"...",
       "header_bg_asset_id":"...",
       "banner_design_id":"...",
       "header_design_id":"..."
-    }
+    },
+    "validation_results":{"pass":true,"warnings":[]}
   },
-  "summary":"banner+header exported to final/"
+  "summary":"banner+header exported to final/ (validation: pass)"
 }
 ```
 

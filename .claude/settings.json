@@ -26,6 +26,17 @@
     ]
   },
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "export-design",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/validate_export.js --hook"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

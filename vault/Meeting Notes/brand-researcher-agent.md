@@ -1,7 +1,7 @@
 # brand-researcher agent
 
 ## Overview
-Sub-agent 1 at `.claude/agents/brand-researcher.md`. Two modes: `mode=profile` runs the website→Facebook→Instagram→manual-interview waterfall and writes `brand_profile.json` (extracts colors via colorthief, fonts, logo URL, language, tone); `mode=logo` resolves the logo via Branch A (download + convert + upload to Canva) or Branch B (generate 3 Canva candidates with EXIF disclosure). Branch A also runs local image enhancement before the Canva upload — `remove_bg.js` (rembg) to strip stray backgrounds, plus a conditional `upscale.js` ×2 for sub-200px logos (B6; see [[image-enhancement-scripts]]). Stateless. Returns JSON envelopes — never asks the user directly. Uses [[marketing-thinking-skill]] for vertical identification and gap analysis. Tools include `WebFetch`, `WebSearch`, `Bash`, and 4 Canva MCP tools.
+Sub-agent 1 at `.claude/agents/brand-researcher.md`. Two modes: `mode=profile` runs the website→Facebook→Instagram→manual-interview waterfall and writes `brand_profile.json` (extracts colors via colorthief, fonts, logo URL, language, tone); `mode=logo` resolves the logo via Branch A (download + convert + upload to Canva) or Branch B (generate 3 Canva candidates with EXIF disclosure). Branch A also runs local image enhancement before the Canva upload — `remove_bg.js` (rembg) to strip stray backgrounds, plus a conditional `upscale.js` ×2 for sub-200px logos (B6; see [[image-enhancement-scripts]]). Stateless. Returns JSON envelopes — never asks the user directly. Uses [[marketing-thinking-skill]] for vertical identification and gap analysis. mode=profile also records a cross-session `similar_clients` list (palette ΔE76 < 10 against earlier clients, via `brand_db.js find-similar-palette` — see [[sqlite-brand-registry]]). Tools include `WebFetch`, `WebSearch`, `Bash`, and 4 Canva MCP tools.
 
 ## Open Questions
 - D2 — Does `upload-asset-from-url` accept `file://`? If not, Branch A needs a local HTTP server fallback (`python3 -m http.server`).
@@ -20,3 +20,8 @@ Sub-agent 1 at `.claude/agents/brand-researcher.md`. Two modes: `mode=profile` r
 - **Decisions:** rembg adopts the cleaned PNG only when `ok:true` and `warnings` is empty — otherwise the original is kept (a wrongly-erased logo is worse than an un-cleaned one). Both steps never block: any failure falls back to the prior file. Placement is here (not [[canva-designer-agent]]) because the local logo file exists only in Branch A *before* upload — canva-designer only ever sees `logo_asset_id`.
 - **Notes / Caveats:** Both tools are token-free (local Python / native binary), so they run even from the worktree. Full pipeline rationale (rembg→upscale order) in [[image-enhancement-scripts]].
 - **Related:** [[image-enhancement-scripts]], [[canva-designer-agent]], [[banner-orchestrator-agent]]
+
+### 2026-06-04 — C4: cross-session palette check [shipped]
+- **What was done:** mode=profile now calls `brand_db.js find-similar-palette --hex {primary} --threshold 10` after colour extraction and writes the matches into `brand_profile.similar_clients` (`[]` when none). Added `similar_clients` to the profile schema; a non-empty result is flagged in the return `summary`.
+- **Decisions:** Advisory only — `ok:false` (empty registry) → `similar_clients: []`, never block the profile. The orchestrator surfaces the warning in the Gate 1 brand summary.
+- **Related:** [[sqlite-brand-registry]], [[banner-orchestrator-agent]]
