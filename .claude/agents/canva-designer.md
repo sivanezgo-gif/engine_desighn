@@ -202,9 +202,15 @@ Save returned `banner_bg_asset_id` and `header_bg_asset_id`.
 
 Create **one header design** and **three banner designs** — one per variant (`v1_balanced`, `v2_bold`, `v3_minimal`). Keeping the three banners as separate designs avoids stacking elements between variants and gives each its own edit URL. **All three banners reuse the same `banner_bg_asset_id`, so there is no extra image generation** (C2's cost saving).
 
-**Spike order (per design):**
-1. Try `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured` with `width:310, height:600` (banner) / `width:1366, height:200` (header).
-2. If custom dimensions are rejected: `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` then `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design` to target.
+**How to create a design at the target size** — ⚠️ corrected 2026-06-04, **not yet verified end-to-end**:
+
+There is **no** "create a blank design at a custom size" Canva tool, and `generate-design-structured` is **presentations-only** (it can NOT make a 310×600 banner — the earlier "spike order" here was wrong). The real building blocks:
+1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` → design **candidates** for a fixed `design_type` (no custom size). Use a vertical type for the banner (e.g. `your_story`) and a wide type for the header.
+2. `create-design-from-candidate` → materialise a chosen candidate into a real `design_id`. **⚠️ this tool is NOT yet in this agent's `tools:` frontmatter — add it before this path can run** (brand-researcher already has it, for logos).
+3. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design(design_id, { type:"custom", width, height })` → resize to the exact target (310×600 / 1366×200). `resize-design` **does** support custom W×H.
+4. Optionally `copy-design` to clone one resized banner into the 3 variant designs (cheaper than generating 3×).
+
+Your own `set_background` (Step 5d) overwrites whatever AI content the candidate started with. **This create→resize→compose flow has not been run live — confirm on the first real `/banner-create` and adjust** (tracked in TODO.md).
 
 Capture `header_design_id` and a `banner_design_id` for each of the three variants.
 
