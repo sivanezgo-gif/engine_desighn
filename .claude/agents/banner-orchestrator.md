@@ -56,6 +56,8 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
      },
      "openai_call_count": 0,
      "similar_clients": [],
+     "variants_generated": 0,
+     "chosen_variant": null,
      "validation_results": null,
      "abort_reason": null
    }
@@ -136,15 +138,14 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    ```json
    {"status":"ok", "branch":"A", "artifacts":{"logo_path":"...","logo_asset_id":"..."}, "summary":"..."}
    ```
-   - Show preview path to user.
-   - **Gate 2A:** "מצאתי לוגו {format}. נראה טוב?" → "אישור" / "לא — צור חדש (Branch B)" / "המשך בלי לוגו".
+   - **Gate 2A** via AskUserQuestion: "מצאתי לוגו {format}. נראה טוב?" → "אישור" / "לא — צור חדש (Branch B)" / "המשך בלי לוגו". Attach the logo image as a `preview` on the "אישור" option (C3): `![logo](./output/{session_id}/logo/source.png)` — use the absolute path if the relative form doesn't render inline.
    - On Branch A→B switch: re-invoke brand-researcher with `--mode=logo --force_generate=true`.
 
    **Branch B — needs generation:**
    ```json
    {"status":"options", "branch":"B", "options":[{"id":1,"thumbnail_url":"...","style":"minimal"},{"id":2,...},{"id":3,...}], "summary":"..."}
    ```
-   - **Gate 2B** via AskUserQuestion (4 options): show the 3 logo previews + "להמשיך בלי לוגו".
+   - **Gate 2B** via AskUserQuestion (4 options): the 3 candidates + "להמשיך בלי לוגו". **Visual preview convention (C3):** give each candidate option a `preview` with its image — prefer the `thumbnail_url` from brand-researcher (an http URL, which renders most reliably) as `![cand](thumbnail_url)`. The same convention applies to Gates 4b and 4d. If a preview does not render as an image in the user's client, the URL/path still shows — graceful degradation.
    - On select 1/2/3: re-invoke brand-researcher with `--mode=logo --selected_candidate_id={id}` to finalize (create-design-from-candidate + upload + EXIF stamp).
    - On "ללא לוגו": set `brand_profile.logo.skipped = true` (Edit) and continue.
 3. Update `session_state.canva_assets.logo_asset_id` and `last_completed_step = "skill2"`.
@@ -178,7 +179,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
 
 ---
 
-## Phase 4 — Canva Design (Gates 4a, 4b, 4c)
+## Phase 4 — Canva Design (Gates 4a, 4b, 4d)
 
 ### Phase 4a — Visual Directions
 
@@ -187,7 +188,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    Task(subagent_type="canva-designer", prompt='INPUT: {"phase":"directions","session_dir":"...","brand_profile_path":"...","chosen_copy_path":"..."}')
    ```
 2. Expected: `{status:"options", options:[{id:"a",name,description,palette[],background_keywords},{id:"b",...},{id:"c",...}]}`.
-3. **Gate 4a** via AskUserQuestion (4 options): 3 directions + "הצג 3 חדשות".
+3. **Gate 4a** via AskUserQuestion (4 options): 3 directions + "הצג 3 חדשות". No images exist yet at this stage, so put each direction's **palette as colour-swatch text** in the option `preview` (the hex list + the one-line description), not an image.
 4. Update `last_completed_step = "skill4_directions"`.
 
 ### Phase 4b — Background Generation
@@ -201,26 +202,30 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
 2. Invoke `canva-designer` (`phase=backgrounds`) with `selected_direction`.
 3. Apply `state_patch` (increment `openai_call_count` by 6).
 4. Expected: `{status:"options", options:[{id:"a",banner:"...",header:"..."},{id:"b",...},{id:"c",...}]}`.
-5. **Gate 4b** via AskUserQuestion (5 options): 3 pairs + "הפק 3 חדשות (אותו כיוון)" + "כיוון אחר (חזור ל-4a)".
+5. **Gate 4b** via AskUserQuestion (5 options): 3 pairs + "הפק 3 חדשות (אותו כיוון)" + "כיוון אחר (חזור ל-4a)". Give each pair option a `preview` with its banner background image (C3 convention): `![set](./output/{session_id}/backgrounds/set_{id}_banner_1024x1984.png)` (absolute path if needed).
 6. Update `last_completed_step = "skill4_backgrounds"`.
 
-### Phase 4c — Compose & Export
+### Phase 4c — Compose 3 variants
 
 1. Invoke `canva-designer` (`phase=compose`) with `selected_pair_set`.
-2. Apply `state_patch` (canva_assets IDs + `validation_results`).
-3. Expected: `{status:"ok", artifacts:{banner_final,header_final,banner_design_id,header_design_id,banner_edit_url,header_edit_url}, validation:{pass,banner,header}}`. The sub-agent already ran `validate_export.js` on both finals (dimensions + blank + contrast + logo + legibility), so you do **not** re-check dimensions here.
-4. **Surface validation (C1):** if `validation.pass === false`, the remaining failures are *soft* (contrast / busy background / logo size — a hard dimension/blank failure would have come back as `status:"fail"`, which you handle as a recompose). List the soft warnings to the user in Hebrew before the gate, e.g. `⚠ ביקורת איכות: ניגודיות 3.1:1 באזור הכותרת (מומלץ ≥3:1 לטקסט גדול)`.
-5. **Gate 4c** via AskUserQuestion: "העיצוב מוכן! לאשר?"
-   - "מושלם" → done.
-   - "להפיק שוב" → re-invoke compose.
-   - "חזור לבחירת רקע" → back to Phase 4b.
-6. On accept — **record the exported assets and close the session (C4):**
+2. Apply `state_patch` (canva_assets IDs + `variants_generated` + `validation_results`).
+3. Expected: `{status:"ok", artifacts:{variants:[{id,path,edit_url},...], header_final, header_design_id, header_edit_url}, validation:{pass, variants:{...}, header:{...}}}`. The sub-agent already ran `validate_export.js` on the header + each variant, so you do **not** re-check dimensions. (A hard dimension/blank failure on the header or on more than one variant would have returned `status:"fail"` → treat as a recompose.)
+4. **Surface validation (C1):** for any variant or the header with `validation.<key>.pass === false`, collect the *soft* warnings (contrast / busy background / logo size) to show per-variant at the gate, e.g. `v2_bold ⚠ ניגודיות 3.1:1`.
+5. Update `last_completed_step = "skill4_compose"`.
+
+### Phase 4d — Choose the final variant (Gate 4d) [C2 + C3]
+
+1. **Gate 4d** via AskUserQuestion — "איזו וריאציה של הבאנר הכי מתאימה לך?" — the 3 variants + "להפיק שוב" (back to 4c) + "חזור לבחירת רקע" (back to 4b):
+   - Labels: `מאוזנת (v1)`, `נועזת (v2)`, `מינימליסטית (v3)`.
+   - Each variant option gets a **thumbnail `preview`** (C3): `![v](./output/{session_id}/final/variants/{id}.png)` (absolute path if the relative form doesn't render), plus any soft-validation note from 4c.4 in its description.
+2. On choosing a variant, copy it to the canonical output and close the session in the registry (C4):
    ```bash
-   node scripts/brand_db.js insert-asset --client-slug "{business_slug}" --session-id "{session_id}" --type banner --path "./output/{session_id}/final/banner_310x600.png" --canva-id "{banner_design_id}"
+   node -e "require('fs').copyFileSync('./output/{session_id}/final/variants/{chosen}.png','./output/{session_id}/final/banner_310x600.png')"
+   node scripts/brand_db.js insert-asset --client-slug "{business_slug}" --session-id "{session_id}" --type banner --path "./output/{session_id}/final/banner_310x600.png" --canva-id "{chosen variant's banner_design_id}"
    node scripts/brand_db.js insert-asset --client-slug "{business_slug}" --session-id "{session_id}" --type header --path "./output/{session_id}/final/header_1366x200.png" --canva-id "{header_design_id}"
    node scripts/brand_db.js finish-session --session-id "{session_id}" --status completed --openai-calls {openai_call_count}
    ```
-   Then update `last_completed_step = "done"`, `status = "completed"`.
+3. Set `session_state.chosen_variant = "{chosen}"`, `canva_assets.banner_design_id = {chosen variant's design id}`, `last_completed_step = "done"`, `status = "completed"`.
 
 ---
 
@@ -230,9 +235,9 @@ Print to user in Hebrew:
 ```
 ✅ העיצוב מוכן!
 
-📎 באנר צד (310×600):
+📎 באנר צד (310×600) — וריאציה נבחרת: {chosen_variant}:
    קובץ: ./output/{session_id}/final/banner_310x600.png
-   קישור עריכה בקאנבה: {banner_edit_url}
+   קישור עריכה בקאנבה: {chosen variant's edit_url}
 
 📎 הדר (1366×200):
    קובץ: ./output/{session_id}/final/header_1366x200.png
@@ -253,7 +258,8 @@ Print to user in Hebrew:
 | 3 | regenerate 3 | Skill 1 |
 | 4a | propose 3 new / edit prompt | Skill 1 |
 | 4b | regenerate same direction / new direction / edit prompt | Skill 4a |
-| 4c | regenerate composition | Skill 4b |
+| 4c | — (compose produces 3 variants; no gate, flows to 4d) | — |
+| 4d | regenerate variants (→ 4c) / new background (→ 4b) | Skill 4c / Skill 4b |
 
 **On backtrack:** rewind `last_completed_step` to the target step's value, preserve `canva_assets` IDs (avoid re-upload of already-uploaded logo/backgrounds), re-invoke the appropriate sub-agent.
 

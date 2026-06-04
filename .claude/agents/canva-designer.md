@@ -1,6 +1,6 @@
 ---
 name: canva-designer
-description: Designs the EzGo banner+header in Canva. Four phases — directions (3 visual directions, no API calls), backgrounds (3 image pairs — gpt-image by default, or Flux/Recraft/Ideogram via Replicate when configured — + sharp resize), compose (Canva editing transactions + export final PNGs), abort (cancel open transactions). Stateless. RTL strategy — the image model renders backgrounds with NO text; Canva native composition adds Hebrew text on top.
+description: Designs the EzGo banner+header in Canva. Four phases — directions (3 visual directions, no API calls), backgrounds (3 image pairs — gpt-image by default, or Flux/Recraft/Ideogram via Replicate when configured — + sharp resize), compose (3 banner variants v1_balanced/v2_bold/v3_minimal + header via Canva editing transactions, each validated via validate_export.js), abort (cancel open transactions). Stateless. RTL strategy — the image model renders backgrounds with NO text; Canva native composition adds Hebrew text on top.
 model: sonnet
 tools: Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__cancel-editing-transaction, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design
 ---
@@ -195,83 +195,93 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url
 
 Save returned `banner_bg_asset_id` and `header_bg_asset_id`.
 
-### Step 5c — Create Canva designs at custom dimensions
+### Step 5c — Create the Canva designs
 
-**Spike order:**
-1. Try `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured` with `width:310, height:600` (banner) and `width:1366, height:200` (header).
-2. If the tool rejects custom dimensions: fall back to `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` (any dimensions) followed by `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design` to the target.
+Create **one header design** and **three banner designs** — one per variant (`v1_balanced`, `v2_bold`, `v3_minimal`). Keeping the three banners as separate designs avoids stacking elements between variants and gives each its own edit URL. **All three banners reuse the same `banner_bg_asset_id`, so there is no extra image generation** (C2's cost saving).
 
-Capture `banner_design_id` and `header_design_id`.
+**Spike order (per design):**
+1. Try `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured` with `width:310, height:600` (banner) / `width:1366, height:200` (header).
+2. If custom dimensions are rejected: `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` then `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design` to target.
 
-### Step 5d — Edit each design
+Capture `header_design_id` and a `banner_design_id` for each of the three variants.
 
-Read `chosen_copy.json`. Get `headline`, `language`, `direction`.
+### Step 5d — Compose the header + 3 banner variants (C2)
 
-**For the banner:**
+Read `chosen_copy.json` (`headline`, `language`, `direction`). The three variants share **one background and one headline** but are **three genuine design takes** — they differ in typographic weight, colour, and breathing room (not random noise):
+
+| Variant | Headline size | Colour | Position / space | Logo |
+|---------|---------------|--------|------------------|------|
+| `v1_balanced` | base | auto-contrast | lower-third, centred | top corner, ≤30% width |
+| `v2_bold` | **+15%** | accent `palette[1]` (must still pass contrast §2) | upper-third, fills more width | bottom, ≤25% width |
+| `v3_minimal` | **−10%** | auto-contrast, single colour | centred, generous margins | small ≤20% width, or omit for max calm |
+
+**Header** — compose once, no variants, **no logo**:
 ```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction(design_id: banner_design_id)
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction(design_id: header_design_id)
 mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations:
   operations:
-    - set_background:
-        asset_id: {banner_bg_asset_id}
-    - add_text:
-        text: "{headline}"
-        direction: "{rtl|ltr}"
-        font_family: "{brand_profile.fonts[0] or 'Heebo' if rtl else 'Inter'}"
-        position: "center" or "lower-third"
-        color: "auto-contrast" (light text on dark bg, dark on light)
-    - add_image:                              # only if logo_asset_id present
-        asset_id: {logo_asset_id}
-        position: "{top|bottom}"              # opposite of text
-        max_width_pct: 35
+    - set_background: { asset_id: {header_bg_asset_id} }
+    - add_text: { text: "{headline}", direction: "{rtl|ltr}", font_family: "{brand_profile.fonts[0] or 'Heebo' if rtl else 'Inter'}", position: "center", color: "auto-contrast" }
 mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction
 ```
 
-**For the header:** same as banner but **NO logo** add_image step.
+**Each banner variant** — loop the three rows above, each on its **own** `banner_design_id`, all using the **same** `banner_bg_asset_id`:
+```
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__start-editing-transaction(design_id: {this variant's banner_design_id})
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__perform-editing-operations:
+  operations:
+    - set_background: { asset_id: {banner_bg_asset_id} }     # same asset for all 3 — no new generation
+    - add_text:  { text: "{headline}", direction: "{rtl|ltr}", font_family: "{font}", size: "{per-variant}", position: "{per-variant}", color: "{per-variant}" }
+    - add_image: { asset_id: {logo_asset_id}, position: "{opposite of text}", max_width_pct: {per-variant} }   # skip if no logo, or if v3_minimal omits it
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction
+```
 
 ### Step 5e — Export
 
+```bash
+mkdir -p {session_dir}final/variants
 ```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: banner_design_id, format: png)
-  → download URL → curl to {session_dir}final/banner_310x600.png
-
+```
+# header (single)
 mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: header_design_id, format: png)
-  → curl to {session_dir}final/header_1366x200.png
+  → download URL → curl to {session_dir}final/header_1366x200.png
+
+# each banner variant
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: {variant's banner_design_id}, format: png)
+  → curl to {session_dir}final/variants/{v1_balanced|v2_bold|v3_minimal}.png
 ```
+
+You produce the **three** variants in `final/variants/`. The orchestrator copies whichever the user picks to `{session_dir}final/banner_310x600.png` (the canonical output).
 
 ### Step 5e.1 — Automated validation gate (C1)
 
-Run `scripts/validate_export.js` on each downloaded final PNG. It re-asserts the exact dimensions, detects a blank/flat export, and — using the text colour you chose and the region where you placed the headline — measures WCAG contrast, logo size, and how "busy" the background is under the text. This replaces the old inline dimension check.
-
-Derive the arguments from how you actually composed each design:
-- `--text-color` — the hex you used for the headline (light, e.g. `#FFFFFF`, on a dark background; dark, e.g. `#111111`, on a light one).
-- `--text-region "x,y,w,h"` — the approximate pixel box of the headline. Banner (310×600): `center` ≈ `10,210,290,180`, `lower-third` ≈ `10,400,290,180`. Header (1366×200): ≈ `40,55,900,95` (or wherever you placed it). Repeatable if you have more than one text block.
-- `--logo-region "x,y,w,h"` — **banner only**, if a logo was added (a top logo at ~35% width ≈ `100,20,108,90`). Omit for the header.
-- `--large-text` — always pass for these display-size headlines (uses the WCAG AA-large 3:1 threshold).
+Run `scripts/validate_export.js` on the **header and each of the 3 variants**. It re-asserts dimensions, detects a blank export, and — from the text colour + placement you chose — measures WCAG contrast, logo size, and background "busy-ness". Derive the args per file (they differ per variant — e.g. `v2_bold` uses the accent colour and the upper-third box):
+- `--text-color` — the headline hex actually used for that variant.
+- `--text-region "x,y,w,h"` — banner: `lower-third` ≈ `10,400,290,180`, `upper-third` ≈ `10,40,290,170`, `center` ≈ `10,210,290,180`. Header ≈ `40,55,900,95`.
+- `--logo-region "x,y,w,h"` — banner only, when a logo was placed (match the variant's `max_width_pct`: 30%≈`100,20,93,90`, 25%≈`110,505,78,75`, 20%≈`124,20,62,60`).
+- `--large-text` — always, for these display headlines.
 
 ```bash
-node scripts/validate_export.js \
-  --input {session_dir}final/banner_310x600.png --kind banner \
-  --text-color "{headline_hex}" --text-region "{banner_text_box}" \
-  --logo-region "{banner_logo_box}" --large-text
-
-node scripts/validate_export.js \
-  --input {session_dir}final/header_1366x200.png --kind header \
-  --text-color "{headline_hex}" --text-region "{header_text_box}" --large-text
+# per variant:
+node scripts/validate_export.js --input {session_dir}final/variants/{variant}.png --kind banner \
+  --text-color "{variant_hex}" --text-region "{variant_text_box}" --logo-region "{variant_logo_box}" --large-text
+# header:
+node scripts/validate_export.js --input {session_dir}final/header_1366x200.png --kind header \
+  --text-color "{header_hex}" --text-region "{header_text_box}" --large-text
 ```
 
 Interpret each JSON result:
-- **exit 1 / `hardFail:true`** (wrong dimensions or a blank export) → the export is broken. Return `status:"fail"` with the failing check in `error`.
-- **`pass:false` with only `severity:"soft"` failures** (low contrast / busy background / oversized logo) → do **not** fail the phase. Surface them: put the merged `checks` + `warnings` into a `validation` object in your return envelope so the orchestrator can show the user at Gate 4c and let them decide whether to accept or recompose.
-- **`pass:true`** → set `validation.pass = true`.
+- **exit 1 / `hardFail:true`** (wrong dimensions or a blank export) → that file is broken. **Drop a single broken variant and continue only if ≥2 variants survive**; if the header fails or fewer than 2 variants survive, return `status:"fail"` with the failing check in `error`.
+- **`pass:false`, `severity:"soft"` only** (low contrast / busy bg / oversized logo) → keep it; record that file's `checks` + `warnings` under its key in the `validation` object so the orchestrator can show them at the variant gate.
+- **`pass:true`** → fine.
 
-(The same script also fires automatically as a PostToolUse hook on `export-design` — a metadata-free safety net that catches wrong-dimension / blank exports even if this step is skipped. The rich contrast / logo / legibility checks happen **only here**, because only you know the text colour and where you placed everything.)
+(The same script also fires automatically as a PostToolUse hook on `export-design` per export — a metadata-free safety net for wrong-dimension / blank exports. The rich contrast / logo / legibility checks happen **only here**, because only you know each variant's colour and placement.)
 
 ### Step 5f — Get edit URLs
 
 ```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: banner_design_id)  → banner_edit_url
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_id)  → header_edit_url
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: {each variant's banner_design_id})  → per-variant edit_url
+mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_id)                    → header_edit_url
 ```
 
 ### Return
@@ -281,28 +291,31 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_i
   "status":"ok",
   "phase":"compose",
   "artifacts":{
-    "banner_final":"{session_dir}final/banner_310x600.png",
+    "variants":[
+      {"id":"v1_balanced","path":"{session_dir}final/variants/v1_balanced.png","banner_design_id":"...","edit_url":"https://canva.com/..."},
+      {"id":"v2_bold","path":"{session_dir}final/variants/v2_bold.png","banner_design_id":"...","edit_url":"https://canva.com/..."},
+      {"id":"v3_minimal","path":"{session_dir}final/variants/v3_minimal.png","banner_design_id":"...","edit_url":"https://canva.com/..."}
+    ],
     "header_final":"{session_dir}final/header_1366x200.png",
-    "banner_design_id":"...",
     "header_design_id":"...",
-    "banner_edit_url":"https://canva.com/...",
     "header_edit_url":"https://canva.com/..."
   },
   "validation":{
     "pass":true,
-    "banner":{"checks":[/* checks[] from validate_export.js banner run */],"warnings":[]},
-    "header":{"checks":[/* checks[] from validate_export.js header run */],"warnings":[]}
+    "variants":{"v1_balanced":{"checks":[],"warnings":[]},"v2_bold":{"checks":[],"warnings":[]},"v3_minimal":{"checks":[],"warnings":[]}},
+    "header":{"checks":[],"warnings":[]}
   },
   "state_patch":{
     "canva_assets":{
       "banner_bg_asset_id":"...",
       "header_bg_asset_id":"...",
-      "banner_design_id":"...",
+      "banner_variant_design_ids":{"v1_balanced":"...","v2_bold":"...","v3_minimal":"..."},
       "header_design_id":"..."
     },
+    "variants_generated":3,
     "validation_results":{"pass":true,"warnings":[]}
   },
-  "summary":"banner+header exported to final/ (validation: pass)"
+  "summary":"3 banner variants + header exported to final/variants/ (validation: pass)"
 }
 ```
 
@@ -334,7 +347,7 @@ Receive `canva_assets` from orchestrator.
 | `gpt-image` returns 429 | Exponential backoff 1s/2s/4s × 3 |
 | `gpt-image` returns blank | Retry once with simplified prompt; second fail → mark image failed |
 | Canva MCP timeout on upload | Retry once after 10s; surface fail if still down |
-| Canva text doesn't render Hebrew correctly | Surface warning in `summary`, include `banner_edit_url` so user can fix manually |
+| Canva text doesn't render Hebrew correctly | Surface warning in `summary`, include the variants' `edit_url`s so user can fix manually |
 | sharp dimension assertion fails | Return `fail` with explicit `error` |
 | Logo asset missing when expected | Skip logo insertion step; continue (orchestrator will note skip in log) |
 
