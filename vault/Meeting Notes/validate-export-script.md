@@ -17,7 +17,7 @@
 
 ## Open Questions
 - **Text/logo regions are approximate.** The agent derives the `--text-region` / `--logo-region` boxes from position keywords (center / lower-third) + the 35% logo cap, not from exact Canva node geometry. Good enough for a heuristic gate; could be tightened later by reading the real bounding boxes via `get-design`.
-- **Hook response shape unverified live.** The `--hook` resolver searches `tool_response` for a local `.png` path or an `http(s)` `.png` URL. The real Canva `export-design` response couldn't be tested live (the Canva MCP was disconnected during the build), so the resolver is deliberately tolerant and was verified with synthetic stdin. **Confirm against a real export in the next end-to-end run.**
+- ~~**Hook response shape unverified live.**~~ **Verified (2026-06-04):** against a real Canva `export-design` response — the download URL sits in `job.urls[0]` as `…/0001-….png?X-Amz-…` (signed S3). The resolver's `/\.png(\?|$)/` matches it, the fetch returns 200, and validation runs. `readStdin` was also hardened to a synchronous fd-0 read after a `spawnSync`-style delivery silently missed the event-based read.
 - **Thresholds** (contrast 4.5 / 3.0-large, legibility 30% edges, blank stdev 2.5, logo 35% / 200px / 60px) are constants at the top of the script — calibrate once we have real exports.
 
 ## Session Log
@@ -32,3 +32,8 @@
   - **WCAG math + edge density implemented directly** — relative-luminance contrast ratio; background estimated by separating text-coloured pixels from the rest of the region; a cheap |dx|+|dy| luma gradient for the "busy background" heuristic.
 - **Tested:** 10 synthetic fixtures — gradient (pass), solid (blank → exit 1), wrong-dim (exit 1), gray-on-gray (contrast 1.18:1 soft), noise (legibility 91.4% soft), logo 58% (fail) / 29% (pass), hook good (exit 0) / blank (exit 2) / no-png (exit 0), out-of-bounds region (clamped).
 - **Related:** [[canva-designer-agent]], [[claude-settings]], [[banner-orchestrator-agent]], [[sqlite-brand-registry]]
+
+### 2026-06-04 — hook verified live + readStdin hardened [shipped]
+- **What was done:** With Canva reconnected, exported a real design and replayed the actual `export-design` response through `--hook`. Confirmed the resolver finds the signed `.png?…` URL in `job.urls[0]`, downloads it (200, real PNG), and validates. Fixed `readStdin` to read fd 0 synchronously (`fs.readFileSync(0)`) — a `spawnSync`-style delivery had silently missed the event-based read; now both a shell pipe and spawn-with-input work.
+- **Decisions:** Synchronous stdin read is the robust choice for a short-lived hook (no event-timing race). Local CLI mode is unaffected (it doesn't read stdin).
+- **Related:** [[canva-designer-agent]], [[claude-settings]]

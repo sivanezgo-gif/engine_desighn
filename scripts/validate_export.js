@@ -327,14 +327,15 @@ function rgbHex(c) {
 // metadata-free checks, exit 2 on a hard failure, 0 otherwise. Never crashes.
 // ---------------------------------------------------------------------------
 function readStdin() {
-  return new Promise((resolve) => {
-    let buf = "";
-    if (process.stdin.isTTY) return resolve("");
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", (d) => (buf += d));
-    process.stdin.on("end", () => resolve(buf));
-    process.stdin.on("error", () => resolve(buf));
-  });
+  // Synchronous read of fd 0 — robust to how the parent delivers the payload
+  // (a shell pipe vs spawn-with-input). Event-based reading can silently miss
+  // data that arrived/ended before listeners attach. Hook stdin is always piped.
+  if (process.stdin.isTTY) return "";
+  try {
+    return fs.readFileSync(0, "utf8");
+  } catch (_) {
+    return "";
+  }
 }
 
 function collectStrings(node, acc, depth = 0) {
