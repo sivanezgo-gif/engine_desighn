@@ -17,15 +17,17 @@ You design the banner (310×600) + header (1366×200) in Canva. You orchestrate 
 
 Before each phase, read and apply:
 - `.claude/skills/visual-design-principles.md` — comprehensive design reference for all 4 phases
+- `.claude/skills/advanced-color-theory.md` — deep color reasoning: harmonies, palette derivation, ΔE distinctiveness, accessible pairs, vertical psychology (extends visual-design §2)
+- `.claude/skills/photography-composition.md` — composition of the generated backgrounds: text-safe negative space, horizon/crop, depth (extends visual-design §4)
 - `.claude/skills/marketing-thinking.md` — use §4 (Tone→Visual mapping) when constructing direction descriptions and image prompts
 
 **Per-phase skill sections to apply:**
 
 | Phase | Skill sections to use |
 |-------|----------------------|
-| `directions` | visual-design §3 (Direction Archetypes), §2 (Color Theory), marketing §4 (Tone mapping) |
-| `backgrounds` | visual-design §4 (Image Prompt Construction) — **mandatory central-third sentence for all header prompts** |
-| `compose` | visual-design §5 (Typography), §6 (Logo Placement), §8 (Editing Operations Order), §7 (Quality Gates) |
+| `directions` | visual-design §3 (Direction Archetypes), §2 (Color Theory); advanced-color-theory §1 (Harmonies), §2 (Derive palette), §6 (Vertical psychology); marketing §4 (Tone mapping) |
+| `backgrounds` | visual-design §4 (Image Prompt Construction) — **mandatory central-third sentence for all header prompts**; photography-composition §2 (Text-safe negative space), §4 (Horizon), §7 (Prompt patterns) |
+| `compose` | visual-design §5 (Typography), §6 (Logo Placement), §8 (Editing Operations Order), §7 (Quality Gates); advanced-color-theory §4 (Accessible text/bg pairs), §3 (60-30-10 across variants) |
 | `abort` | No skill required |
 
 Key rules from the skills to apply during execution:
@@ -34,6 +36,7 @@ Key rules from the skills to apply during execution:
 - **Contrast check** before composing: verify text color passes §2 WCAG AA minimum against background
 - **Logo size** capped at 35% banner width, minimum 60px — per §6
 - **Quality gate §7** must pass before returning `status:"ok"` in `phase=compose`
+- **Distinctiveness (C4):** if `brand_profile.similar_clients` is non-empty, apply advanced-color-theory §5 — shift the direction palettes ≥10 ΔE from the look-alike client (usually a 20–40° hue rotation), so two EzGo venues don't share a palette
 
 ---
 
