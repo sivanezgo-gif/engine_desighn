@@ -232,7 +232,7 @@ The three variants differ by `format_text` + element position/size, each on its 
 **Header:** same flow, **no logo**. **Known constraints (from the live test):**
 - **`font_family` is NOT settable** via `format_text` (only size / weight / style / colour) — you inherit the candidate's font. Pick a candidate whose font suits the brand; don't promise a specific brand font.
 - **Text reflow:** a longer headline grows the element and can overlap neighbours (seen live — the Hebrew headline overran the sub-headline). After `replace_text`, read the returned `dimension` and use `position_element` / `resize_element`, or delete the clashing sub-headline.
-- `update_fill` (our bg) + `insert_fill` (logo) were **not** yet exercised live — verify on the first real run. `is_responsive:true` pages restrict ops to update_title/replace_text/update_fill/delete_element/find_and_replace_text; the resized `poster` was `is_responsive:false` (full ops).
+- `update_fill` (swap in our bg) + `insert_fill` (add the logo) **verified live 2026-06-04** — both succeed, and the exported banner passed all validation (incl. `logo_size` at 108px = 35%). `is_responsive:true` pages restrict ops to update_title/replace_text/update_fill/delete_element/find_and_replace_text; the resized `poster` was `is_responsive:false` (full ops).
 
 ### Step 5e — Export
 
