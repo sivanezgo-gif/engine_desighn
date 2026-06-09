@@ -27,6 +27,7 @@ Technical documentation for every code, agent, command, script, and config file 
 ### Scripts (`scripts/`)
 - [[openai-image-script]] — gpt-image-2 background generation CLI
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
+- [[render-headline-mock-script]] — sharp/Pango RTL headline mock for Gate-3 visual previews
 - [[validate-export-script]] — C1 export quality gate (WCAG contrast / logo size / legibility / dimensions; CLI + PostToolUse hook)
 - [[image-enhancement-scripts]] — rembg (background removal) + Real-ESRGAN (upscaling) pipeline for logos
 - [[vault-sync-hook]] — Obsidian auto-sync: mirror worktree vault→main + auto-commit (Stop/SessionEnd hooks)
