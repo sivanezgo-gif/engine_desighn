@@ -30,3 +30,6 @@ Thumbs.db
 # temp
 tmp/
 *.tmp
+
+# local AI tool binaries (large, platform-specific — installed per machine)
+tools/

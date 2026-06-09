@@ -19,9 +19,14 @@ const fs = require("fs");
 const path = require("path");
 
 // --- minimal .env loader (no external deps) ---
-function loadDotEnv() {
-  const envPath = path.join(process.cwd(), ".env");
-  if (!fs.existsSync(envPath)) return;
+// Loads cwd/.env, then falls back to the MAIN repo root's .env. Scripts often run
+// from a git worktree that has no .env of its own; the canonical .env lives in the
+// main checkout. Main root is resolved via the shared git-common-dir (same approach
+// as sync_vault.js). Values already in process.env always win.
+const { spawnSync } = require("child_process");
+
+function parseDotEnv(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return;
   const txt = fs.readFileSync(envPath, "utf8");
   for (const line of txt.split(/\r?\n/)) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
@@ -32,6 +37,27 @@ function loadDotEnv() {
       }
       process.env[m[1]] = val;
     }
+  }
+}
+
+function mainRepoRoot() {
+  try {
+    let r = spawnSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { encoding: "utf8" });
+    let commonDir = r.status === 0 && r.stdout ? r.stdout.trim() : "";
+    if (!commonDir) {
+      r = spawnSync("git", ["rev-parse", "--git-common-dir"], { encoding: "utf8" });
+      if (r.status === 0 && r.stdout) commonDir = path.resolve(process.cwd(), r.stdout.trim());
+    }
+    if (commonDir) return path.dirname(commonDir); // parent of .git == repo root
+  } catch (_) {}
+  return null;
+}
+
+function loadDotEnv() {
+  parseDotEnv(path.join(process.cwd(), ".env")); // 1) cwd (worktree or main)
+  const root = mainRepoRoot();                    // 2) fallback: main repo root .env
+  if (root && path.resolve(root) !== path.resolve(process.cwd())) {
+    parseDotEnv(path.join(root, ".env"));
   }
 }
 loadDotEnv();

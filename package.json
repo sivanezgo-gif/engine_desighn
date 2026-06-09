@@ -1,4 +1,15 @@
 {
+  "name": "ezgo-banner-generator",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Multi-agent EzGo Hospitality banner+header generation system",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:init": "node scripts/brand_db.js init",
+    "db:migrate": "node scripts/migrate_existing_sessions.js"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.102.0",
     "headroom-ai": "^0.22.4",

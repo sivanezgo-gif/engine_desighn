@@ -15,6 +15,28 @@
 
 הרחבה אופציונלית (`format-multiplier`): סט נכסים מלא — social square, story, קופון, כרטיס מוצר.
 
+המערכת במצבה הנוכחי היא **אוטומציית Claude Code מרובת-agents** (לא אפליקציית web) — orchestrator + sub-agents + scripts + שרתי MCP, המייצרת 3 וריאציות באנר 310×600 + הדר 1366×200 ללקוח.
+
+## Stack טכנולוגי
+
+**Runtime & core**
+- **Node.js 22+** — כל ה-scripts (נבדק על 24.15); משתמש ב-`node:sqlite` המובנה.
+- **sharp** — עיבוד תמונה: resize/crop לממדים הסופיים + ניתוח פיקסלים לוולידציה (`validate_export.js`).
+- **SQLite** (`node:sqlite` מובנה, `output/brands.db`) — מסד מותג cross-session (פלטות ΔE76, כותרות Jaccard).
+- **Python 3** — rembg (הסרת רקע, u2net), colorthief (חילוץ פלטה), cairosvg (המרת SVG).
+
+**יצירת תמונות**
+- **OpenAI gpt-image** (ברירת מחדל) דרך `scripts/openai_image.js`.
+- **Replicate** (Flux / Recraft / Ideogram) — *חסום בטוקן*, נופל חזרה ל-gpt-image.
+
+**שיפור תמונה (מקומי, ללא API)**
+- **Real-ESRGAN** (`realesrgan-ncnn-vulkan`) — upscaling. **rembg** — הסרת רקע ללוגו. צינור נעול: rembg → upscale.
+
+**עיצוב & MCP**
+- **Canva MCP** — יצירת designs, editing transactions, export. **Figma MCP** (OAuth connector) — anchor ל-design-system (רדום עד שייווצר קובץ).
+
+**פקודות:** אין build/test/lint פורמליים. בדיקת script בודד: `node scripts/<name>.js --help`. בדיקת end-to-end: `/banner-create`.
+
 ---
 
 ## Invariants קשיחים (מחייבים כל סוכן)
@@ -60,7 +82,7 @@
 
 ```
 output/{session_id}/        # תוצרי סשן: logo/ backgrounds/ chosen_set/ final/ + session_state.json, session.log
-scripts/                    # openai_image.js, resize.js (+ remove_bg.js, upscale.js — צינור הלוגו)
+scripts/                    # openai_image.js, resize.js, brand_db.js, validate_export.js, remove_bg.js, upscale.js, sync_vault.js
 .claude/{agents,skills,commands}/
 vault/                      # זיכרון ארוך-טווח (Meeting Notes / Brand Guidelines / ...)
 .env                        # סודות (לא ב-git)
@@ -71,8 +93,9 @@ vault/                      # זיכרון ארוך-טווח (Meeting Notes / Br
 ## מצביעים
 
 - **זיכרון ארוך-טווח** — ה-`vault/` הוא הזיכרון של הפרויקט. חובה לפעול לפי skill `obsidian-vault-workflow`
-  בתחילת ובסוף כל משימה.
+  בתחילת ובסוף כל משימה. ה-vault מסונכרן אוטומטית דרך hook — ראה `vault/Meeting Notes/vault-sync-hook.md`.
 - **החוזה התפעולי המלא** — skill `orchestration-protocol` (לא משוכפל כאן).
 - **זיכרון מותג חוצה-סשנים** — SQLite registry; ראה `vault/Meeting Notes/sqlite-brand-registry.md`
   (דמיון פלטה ΔE76, זיהוי כותרות כפולות Jaccard).
 - **אינטגרציית Canva** — MCP server פעיל בסביבה; המכניקה ב-skill `canva-mcp-operations`.
+- **תיעוד טכני** — `vault/` (נפתח ב-Obsidian). נקודות כניסה: `vault/Meeting Notes/_index.md`, `vault/Brand Guidelines/_index.md`, [[architecture-overview]].
