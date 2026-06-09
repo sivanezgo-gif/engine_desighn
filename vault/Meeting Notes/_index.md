@@ -5,12 +5,15 @@ Technical documentation for every code, agent, command, script, and config file 
 ## Topics
 
 ### Architecture
-- [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + 2 scripts
+- [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + scripts
+- [[sqlite-brand-registry]] — cross-session brand memory: clients, palettes (ΔE76), headlines (Jaccard), assets
 
 ### Root configuration
 - [[claude-md]] — project-level Claude Code instructions (CLAUDE.md)
 - [[gitignore-config]] — .gitignore rules (secrets, output, deps)
 - [[env-example]] — environment variable template (.env.example)
+- [[claude-settings]] — `.claude/settings.json` permissions allowlist + Stop/SessionEnd vault-sync hooks
+- [[figma-mcp]] — Figma MCP: official OAuth connector (live, verified 2026-06-04) + Framelink `.mcp.json` PAT fallback (dormant)
 
 ### Agents (`.claude/agents/`)
 - [[banner-orchestrator-agent]] — main orchestrator, owns gates and session state
@@ -24,6 +27,9 @@ Technical documentation for every code, agent, command, script, and config file 
 ### Scripts (`scripts/`)
 - [[openai-image-script]] — gpt-image-2 background generation CLI
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
+- [[validate-export-script]] — C1 export quality gate (WCAG contrast / logo size / legibility / dimensions; CLI + PostToolUse hook)
+- [[image-enhancement-scripts]] — rembg (background removal) + Real-ESRGAN (upscaling) pipeline for logos
+- [[vault-sync-hook]] — Obsidian auto-sync: mirror worktree vault→main + auto-commit (Stop/SessionEnd hooks)
 
 ### Built-in skill docs (`.claude/skills/obsidian-*`)
 - [[obsidian-markdown-skill]] — Obsidian Flavored Markdown reference

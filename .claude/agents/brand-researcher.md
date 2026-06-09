@@ -1,8 +1,8 @@
 ---
 name: brand-researcher
-description: Researches a venue's brand identity (mode=profile) or resolves its logo (mode=logo). Profile mode runs the website→Facebook→Instagram→manual interview waterfall and writes brand_profile.json. Logo mode handles Branch A (download existing) or Branch B (generate via Canva). Stateless — invoke once per mode. Always returns a JSON envelope; never asks the user directly.
+description: Researches a venue's brand identity (mode=profile) or resolves its RAW logo (mode=logo). Profile mode runs the website→Facebook→Instagram→manual interview waterfall and writes brand_profile.json. Logo mode handles Branch A (download existing) or Branch B (generate via Canva) and returns a raw logo path — it does NOT clean or upload (asset-forge owns prep + Canva upload). Stateless — invoke once per mode. Always returns a JSON envelope; never asks the user directly.
 model: sonnet
-tools: WebFetch, WebSearch, Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design-thumbnail
+tools: WebFetch, WebSearch, Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design-thumbnail
 ---
 
 # Brand Researcher — Sub-Agent 1
@@ -170,6 +170,10 @@ Write to `{session_dir}brand_profile.json` via Write tool.
 
 Read `brand_profile.json` from `brand_profile_path`.
 
+> **Scope boundary:** you produce a **raw** logo file on disk and return its path. You do **not**
+> run rembg/upscale, do **not** stamp EXIF, and do **not** upload to Canva — `asset-forge` owns all
+> of that. The orchestrator dispatches `asset-forge` after the user approves your logo at Gate 2A/2B.
+
 ### Branch A — usable logo found
 
 **Conditions for usable:**
@@ -177,24 +181,22 @@ Read `brand_profile.json` from `brand_profile_path`.
 - AND (format is SVG OR raster minimum dimension ≥ 200px)
 - AND `force_generate !== true`
 
-**Steps:**
+**Steps (produce a raw PNG only — no upload):**
 1. If file is WebP/AVIF, convert to PNG:
    ```bash
-   node -e "require('sharp')('{logo.local_path}').png().toFile('{session_dir}logo/source.png')"
+   node -e "require('sharp')('{logo.local_path}').png().toFile('{session_dir}logo/raw_logo.png')"
    ```
-2. If file is SVG, optionally convert to PNG (Canva accepts SVG; PNG is safer):
+2. If file is SVG, convert to PNG (asset-forge prefers a raster source):
    ```bash
-   python3 -c "import cairosvg; cairosvg.svg2png(url='{logo.local_path}', write_to='{session_dir}logo/source.png', output_width=512)"
+   python3 -c "import cairosvg; cairosvg.svg2png(url='{logo.local_path}', write_to='{session_dir}logo/raw_logo.png', output_width=512)"
    ```
-3. Upload to Canva:
-   - Use `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url`.
-   - **D2 spike:** if MCP rejects `file://` URLs, host a tiny local file server first (Bash: `python3 -m http.server 8765 &` from `{session_dir}logo/` then use `http://localhost:8765/source.png`; kill server after upload).
-4. Capture `logo_asset_id` from the response.
-5. Update `brand_profile.json`: set `logo.canva_asset_id`, `logo.local_path`.
+   (If the source is already a usable PNG, copy/rename it to `{session_dir}logo/raw_logo.png`.)
+3. Update `brand_profile.json`: set `logo.local_path = "{session_dir}logo/raw_logo.png"`. Leave
+   `logo.canva_asset_id = null` — asset-forge sets it after upload.
 
-**Return:**
+**Return (raw path; asset-forge will prep + upload):**
 ```json
-{"status":"ok","mode":"logo","branch":"A","artifacts":{"logo_path":"{session_dir}logo/source.png","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"logo SVG uploaded, asset_id: ..."}
+{"status":"ok","mode":"logo","branch":"A","artifacts":{"raw_logo_path":"{session_dir}logo/raw_logo.png"},"summary":"raw logo ready (format: {fmt}); hand to asset-forge"}
 ```
 
 ### Branch B — generate logo
@@ -216,21 +218,15 @@ Read `brand_profile.json` from `brand_profile_path`.
 
 **Triggered when:** `selected_candidate_id` is set (orchestrator passing user's choice back).
 1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate` with the selected candidate id → get a design id with a downloadable URL.
-2. Download the resulting PNG to `{session_dir}logo/generated_options/chosen.png`.
-3. Embed EXIF disclosure via Bash:
-   ```bash
-   exiftool -overwrite_original \
-     -Generator="gpt-image-2" \
-     -Comment="AI-generated logo" \
-     "{session_dir}logo/generated_options/chosen.png"
-   ```
-   (If exiftool unavailable, use sharp metadata API.)
-4. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url` → capture `logo_asset_id`.
-5. Update `brand_profile.json`: `logo.generated = true`, `logo.canva_asset_id`, `logo.local_path`.
+2. Download the resulting PNG to `{session_dir}logo/raw_logo.png`.
+3. Update `brand_profile.json`: `logo.generated = true`, `logo.local_path = "{session_dir}logo/raw_logo.png"`, `logo.canva_asset_id = null`.
 
-**Return:**
+> EXIF disclosure stamping and Canva upload are **asset-forge's** job. The orchestrator invokes it
+> with `generated: true`, which triggers the `Generator="gpt-image-2"` EXIF stamp there.
+
+**Return (raw path; asset-forge will stamp EXIF + upload):**
 ```json
-{"status":"ok","mode":"logo","branch":"B","artifacts":{"logo_path":"...","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"AI logo generated, asset_id: ..."}
+{"status":"ok","mode":"logo","branch":"B","artifacts":{"raw_logo_path":"{session_dir}logo/raw_logo.png","generated":true},"summary":"AI logo generated (raw); hand to asset-forge"}
 ```
 
 ---

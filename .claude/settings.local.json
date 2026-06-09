@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -oE 'https://b-ami\\\\.co\\\\.il/wp-content/uploads/[^\"'\\\\'']+\\\\.\\(png|jpg|jpeg|svg|webp\\)' /tmp/bami_page.html | sort -u | head -20)",
+      "Bash(curl -s --max-time 15 \"https://b-ami.co.il/wp-content/uploads/2023/10/logo.png\" -o \"C:/Users/sisuke/Downloads/לימודי אוטומציה/claude_workspace/graphic_desighn/output/spa-ben-ami-20260510-133633/logo/logo_original.png\")",
+      "WebFetch(domain:b-ami.co.il)",
+      "Bash(python -c \"import requests; r = requests.get\\('https://fonts.gstatic.com/s/frankruhllibre/v14/j8_36_fAw7jrcalD7oKYNX8QjbZwBCNXGJFW7GkBNVh2CGA.woff2',timeout=10\\); print\\('status', r.status_code, 'bytes', len\\(r.content\\)\\)\")",
+      "Bash(python compose_v2.py)"
+    ]
+  }
+}

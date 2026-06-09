@@ -18,6 +18,7 @@ You design the banner (310×600) + header (1366×200) in Canva. You orchestrate 
 Before each phase, read and apply:
 - `.claude/skills/visual-design-principles.md` — comprehensive design reference for all 4 phases
 - `.claude/skills/marketing-thinking.md` — use §4 (Tone→Visual mapping) when constructing direction descriptions and image prompts
+- `.claude/skills/canva-mcp-operations.md` — the mechanical Canva MCP playbook (upload, create-design spike order, transaction lifecycle, export + dimension assert). This skill owns the *how to call the API*; you own the *what to design*.
 
 **Per-phase skill sections to apply:**
 
@@ -181,24 +182,20 @@ After both: assert dimensions via the script's metadata check. If mismatch → r
 
 ### Step 5b — Upload backgrounds to Canva
 
-For each chosen background:
-```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url
-  url: file://{absolute_path_to_chosen_bg}    # if file:// supported
-       OR http://localhost:8765/...           # via local http server fallback
-```
-
-Save returned `banner_bg_asset_id` and `header_bg_asset_id`.
+Upload each chosen background per `canva-mcp-operations §1` (handles the `file://` vs local
+`http.server` fallback). Save the returned `banner_bg_asset_id` and `header_bg_asset_id`.
 
 ### Step 5c — Create Canva designs at custom dimensions
 
-**Spike order:**
-1. Try `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design-structured` with `width:310, height:600` (banner) and `width:1366, height:200` (header).
-2. If the tool rejects custom dimensions: fall back to `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` (any dimensions) followed by `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__resize-design` to the target.
-
-Capture `banner_design_id` and `header_design_id`.
+Create the banner (`310×600`) and header (`1366×200`) designs per `canva-mcp-operations §2`
+(structured-first spike order, with `generate-design` + `resize-design` fallback). Capture
+`banner_design_id` and `header_design_id`.
 
 ### Step 5d — Edit each design
+
+Wrap edits in a transaction per `canva-mcp-operations §3` (start → perform → commit;
+cancel-on-failure). The `operations` payload below is the **design-specific** part you own (RTL,
+font, logo placement) — see `visual-design-principles §8` for operation order.
 
 Read `chosen_copy.json`. Get `headline`, `language`, `direction`.
 
@@ -224,29 +221,14 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__commit-editing-transaction
 
 **For the header:** same as banner but **NO logo** add_image step.
 
-### Step 5e — Export
+### Step 5e — Export + assert
 
-```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: banner_design_id, format: png)
-  → download URL → curl to {session_dir}final/banner_310x600.png
-
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__export-design(design_id: header_design_id, format: png)
-  → curl to {session_dir}final/header_1366x200.png
-```
-
-After download, re-assert dimensions:
-```bash
-node -e "const sharp=require('sharp');Promise.all([sharp('{banner}').metadata(),sharp('{header}').metadata()]).then(([b,h])=>{if(b.width!==310||b.height!==600||h.width!==1366||h.height!==200){console.error('DIM_MISMATCH');process.exit(1)}})"
-```
-
-If mismatch → return `status: "fail"` with error.
+Export both designs to PNG, re-download, and assert dimensions per `canva-mcp-operations §4`
+(banner `310x600`, header `1366x200`). On a dimension mismatch → return `status:"fail"`.
 
 ### Step 5f — Get edit URLs
 
-```
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: banner_design_id)  → banner_edit_url
-mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_id)  → header_edit_url
-```
+Get `banner_edit_url` and `header_edit_url` per `canva-mcp-operations §5`.
 
 ### Return
 
@@ -278,14 +260,9 @@ mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design(design_id: header_design_i
 
 ## Phase = abort
 
-Receive `canva_assets` from orchestrator.
-
-1. For each `*_design_id` present without commit confirmation, call:
-   ```
-   mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__cancel-editing-transaction(design_id: ...)
-   ```
-   (If no transaction is open, the call may no-op or error — catch and ignore.)
-2. Optional v2: delete drafted designs. Out of scope for v1 — Canva trash auto-cleans.
+Receive `canva_assets` from orchestrator. Cancel open transactions per `canva-mcp-operations §6`
+(for each `*_design_id` without commit confirmation → `cancel-editing-transaction`; no-op/error is
+caught and ignored). Drafted designs are left for Canva's trash auto-clean (v1).
 
 ### Return
 

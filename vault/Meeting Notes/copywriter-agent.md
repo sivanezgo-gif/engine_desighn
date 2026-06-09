@@ -13,3 +13,7 @@ Sub-agent 2 at `.claude/agents/copywriter.md`. Two modes: `mode=generate` return
 - **Decisions:** Stateless and pure LLM — no API calls — keeps it fast and easy to regenerate. `direction` field auto-derived from `language` (he→rtl, en→ltr) and consumed by the canva-designer for text element placement.
 - **Notes / Caveats:** Hebrew word-count target is **3–6**, not 4–8 — Hebrew carries more meaning per word visually.
 - **Related:** [[banner-orchestrator-agent]], [[hospitality-copywriting-skill]], [[marketing-thinking-skill]], [[canva-designer-agent]]
+
+### 2026-06-04 — C4: duplicate-headline check stays out of copywriter [note]
+- **What was done:** No code change. Recording the decision: the cross-session duplicate-headline check (C4) was placed in [[banner-orchestrator-agent]] (which has `Bash` + the 3 candidate texts at the gate), **not** here — copywriter stays a pure `Read,Write` LLM agent. The `duplicate_risk` marker is shown at Gate 3.
+- **Related:** [[banner-orchestrator-agent]], [[sqlite-brand-registry]]
