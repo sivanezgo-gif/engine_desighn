@@ -82,7 +82,7 @@
 
 ```
 output/{session_id}/        # תוצרי סשן: logo/ backgrounds/ chosen_set/ final/ + session_state.json, session.log
-scripts/                    # openai_image.js, resize.js, brand_db.js, validate_export.js, remove_bg.js, upscale.js, sync_vault.js
+scripts/                    # openai_image.js, resize.js, brand_db.js, validate_export.js, remove_bg.js, upscale.js, render_headline_mock.js, sync_vault.js
 .claude/{agents,skills,commands}/
 vault/                      # זיכרון ארוך-טווח (Meeting Notes / Brand Guidelines / ...)
 .env                        # סודות (לא ב-git)

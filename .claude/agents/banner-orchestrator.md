@@ -34,7 +34,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
 2. **Compute `session_id`** = `{business_slug}-{YYYYMMDD-HHMMSS}` (use `date +"%Y%m%d-%H%M%S"`).
 3. **Create session folder structure** with Bash:
    ```
-   mkdir -p ./output/{session_id}/{logo,logo/generated_options,backgrounds,chosen_set,final}
+   mkdir -p ./output/{session_id}/{logo,logo/generated_options,backgrounds,copy_mocks,chosen_set,final}
    ```
 4. **Initialize `session_state.json`:**
    ```json
@@ -111,6 +111,13 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    - "מאשרת — המשך"
    - "לתקן שדה" → ask user which field, edit `brand_profile.json` directly via Edit tool, re-confirm.
    - "להפעיל שוב מחקר" → re-invoke brand-researcher.
+
+   **Visual preview (C3) — brand identity.** Attach a `preview` to the "מאשרת — המשך" option so the user sees the *look* (logo + palette), not just text. Build it from `brand_profile`:
+   - If `logo.found === true` and `logo.local_path` exists: `![logo]({absolute logo.local_path})`.
+   - Palette as colour-swatch lines, one per non-null colour, e.g.
+     `🟦 ראשי {colors.primary}` / `🟨 משני {colors.secondary}` / `⬜ רקע {colors.background_suggestion}`.
+     (Pick the emoji nearest each hex; the hex itself is the source of truth.)
+   This is the first point the final look is decided — logo and palette flow straight into the banner.
 5. On accept:
    - **Record the brand (C4):** upsert the client's `business_type` and store its palette so future clients can be compared against it:
      ```bash
@@ -138,14 +145,14 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    ```json
    {"status":"ok", "branch":"A", "artifacts":{"logo_path":"...","logo_asset_id":"..."}, "summary":"..."}
    ```
-   - **Gate 2A** via AskUserQuestion: "מצאתי לוגו {format}. נראה טוב?" → "אישור" / "לא — צור חדש (Branch B)" / "המשך בלי לוגו". Attach the logo image as a `preview` on the "אישור" option (C3): `![logo](./output/{session_id}/logo/source.png)` — use the absolute path if the relative form doesn't render inline.
+   - **Gate 2A** via AskUserQuestion: "מצאתי לוגו {format}. נראה טוב?" → "אישור" / "לא — צור חדש (Branch B)" / "המשך בלי לוגו". Attach the **cleaned** logo image as a `preview` on the "אישור" option (C3) — use `artifacts.logo_path` from the envelope (the post-rembg/upscale working file, what actually lands on the banner), **not** the raw `source.png`: `![logo]({artifacts.logo_path})` — absolute path if the relative form doesn't render inline. If `artifacts.logo_path` is missing, fall back to `brand_profile.logo.local_path`.
    - On Branch A→B switch: re-invoke brand-researcher with `--mode=logo --force_generate=true`.
 
    **Branch B — needs generation:**
    ```json
    {"status":"options", "branch":"B", "options":[{"id":1,"thumbnail_url":"...","style":"minimal"},{"id":2,...},{"id":3,...}], "summary":"..."}
    ```
-   - **Gate 2B** via AskUserQuestion (4 options): the 3 candidates + "להמשיך בלי לוגו". **Visual preview convention (C3):** give each candidate option a `preview` with its image — prefer the `thumbnail_url` from brand-researcher (an http URL, which renders most reliably) as `![cand](thumbnail_url)`. The same convention applies to Gates 4b and 4d. If a preview does not render as an image in the user's client, the URL/path still shows — graceful degradation.
+   - **Gate 2B** via AskUserQuestion (4 options): the 3 candidates + "להמשיך בלי לוגו". **Visual preview convention (C3):** give each candidate option a `preview` with its image — prefer the `thumbnail_url` from brand-researcher (an http URL, which renders most reliably) as `![cand](thumbnail_url)`. The same convention applies to every gate where the final look is decided — Gates 1 (logo + palette), 2A (cleaned logo), 3 (headline mocks), 4b (backgrounds) and 4d (variants). If a preview does not render as an image in the user's client, the URL/path still shows — graceful degradation.
    - On select 1/2/3: re-invoke brand-researcher with `--mode=logo --selected_candidate_id={id}` to finalize (create-design-from-candidate + upload + EXIF stamp).
    - On "ללא לוגו": set `brand_profile.logo.skipped = true` (Edit) and continue.
 3. Update `session_state.canva_assets.logo_asset_id` and `last_completed_step = "skill2"`.
@@ -170,7 +177,16 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    node scripts/brand_db.js find-duplicate-headline --text "{candidate_text}" --language "{language}" --business-type "{business_type}" --threshold 0.7
    ```
    If `ok:true` with a non-empty `matches` array for a candidate, mark it `duplicate_risk` and keep the closest `existing_text` + `client_name`. `ok:false` (empty registry) → no risk. Never block on this.
-3. **Gate 3** via AskUserQuestion (4 options): 3 headlines + "להפיק 3 חדשות". For any candidate flagged `duplicate_risk`, append a short Hebrew marker to its option description, e.g. `⚠ דומה ל'{existing_text}' ({client_name})`, so the user chooses with eyes open.
+2c. **Render visual mocks (C3).** A headline *is* part of the final look, so show each candidate as an image — the line set in the brand colour on the brand background — not just plain text. For each of the 3 candidates run (Bash):
+   ```bash
+   node scripts/render_headline_mock.js \
+     --text "{candidate_text}" \
+     --primary "{colors.primary}" \
+     --bg "{colors.background_suggestion || '#FFFFFF'}" \
+     --out ./output/{session_id}/copy_mocks/opt_{id}.png
+   ```
+   The script is RTL-aware (Pango) and auto-flips the text colour if the brand colour barely contrasts with the background, so the mock stays legible. Parse the JSON line; on `ok:false` for a candidate, skip its image (fall back to text) — never block the gate on a render failure.
+3. **Gate 3** via AskUserQuestion (4 options): 3 headlines + "להפיק 3 חדשות". Give each headline option a **`preview`** with its rendered mock (C3): `![copy](./output/{session_id}/copy_mocks/opt_{id}.png)` (absolute path if the relative form doesn't render). For any candidate flagged `duplicate_risk`, append a short Hebrew marker to its option description, e.g. `⚠ דומה ל'{existing_text}' ({client_name})`, so the user chooses with eyes open.
 4. On select: invoke copywriter again with `mode:"finalize"` and `selected_index` (updates `chosen_copy.json`). Then record the chosen headline in the registry:
    ```bash
    node scripts/brand_db.js insert-headline --client-slug "{business_slug}" --session-id "{session_id}" --text "{chosen_headline}" --style "{chosen_style}" --language "{language}"

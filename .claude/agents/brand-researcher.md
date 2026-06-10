@@ -230,9 +230,9 @@ Read `brand_profile.json` from `brand_profile_path`.
 6. Capture `logo_asset_id` from the response.
 7. Update `brand_profile.json`: set `logo.canva_asset_id`, `logo.local_path` (the final working file), and add `logo.cleaned` (bool — rembg adopted) + `logo.upscaled` (bool) for traceability.
 
-**Return:**
+**Return:** `artifacts.logo_path` must be the **final working file** you actually uploaded (e.g. `source_nobg.png` / `source_2x.png`), **not** the raw `source.png` — the orchestrator shows it as the cleaned-logo preview at Gate 2A, so it must reflect the post-prep result.
 ```json
-{"status":"ok","mode":"logo","branch":"A","artifacts":{"logo_path":"{session_dir}logo/source.png","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"logo SVG uploaded, asset_id: ..."}
+{"status":"ok","mode":"logo","branch":"A","artifacts":{"logo_path":"{session_dir}logo/<final_working_file>.png","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"logo SVG uploaded, asset_id: ..."}
 ```
 
 ### Branch B — generate logo
