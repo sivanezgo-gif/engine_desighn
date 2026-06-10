@@ -4,6 +4,9 @@ Technical documentation for every code, agent, command, script, and config file 
 
 ## Topics
 
+### Completed clients
+- [[completed-client-hamoshava]] — המושבה, session hamoshava-20260609-110009, completed 2026-06-10, v2_bold chosen
+
 ### Architecture
 - [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + scripts
 - [[sqlite-brand-registry]] — cross-session brand memory: clients, palettes (ΔE76), headlines (Jaccard), assets
