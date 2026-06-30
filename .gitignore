@@ -36,3 +36,6 @@ tools/
 
 # Claude Code worktrees (ephemeral, created + destroyed by the harness)
 .claude/worktrees/
+
+# Obsidian app config inside the vault (never commit workspace/appearance state)
+banner_create/.obsidian/

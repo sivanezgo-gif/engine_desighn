@@ -151,8 +151,8 @@ function runMirror() {
     warnings.push("could not resolve main repo root; skipping mirror");
     return { mirrored: 0, skipped: "no-main-root" };
   }
-  const srcVault = path.join(srcRoot, "vault");
-  const dstVault = path.join(mainRoot, "vault");
+  const srcVault = path.join(srcRoot, "banner_create");
+  const dstVault = path.join(mainRoot, "banner_create");
 
   if (path.resolve(srcVault) === path.resolve(dstVault)) {
     // Running directly in the main repo — nothing to mirror.
@@ -180,14 +180,14 @@ function runCommit() {
   }
 
   // Stage vault changes (new + modified) without touching anything else.
-  const add = git(["add", "--", "vault"], srcRoot);
+  const add = git(["add", "--", "banner_create"], srcRoot);
   if (add.status !== 0) {
     warnings.push(`git add failed: ${(add.stderr || "").trim().slice(0, 200)}`);
     return { committed: null };
   }
 
   // Anything staged under vault/? `--quiet` exits 1 when there ARE diffs.
-  const staged = git(["diff", "--cached", "--quiet", "--", "vault"], srcRoot);
+  const staged = git(["diff", "--cached", "--quiet", "--", "banner_create"], srcRoot);
   if (staged.status === 0) {
     return { committed: null }; // nothing to commit
   }
@@ -197,7 +197,7 @@ function runCommit() {
   }
 
   const msg = `docs(vault): auto-sync ${new Date().toISOString()}`;
-  const commit = git(["commit", "-m", msg, "--", "vault"], srcRoot);
+  const commit = git(["commit", "-m", msg, "--", "banner_create"], srcRoot);
   if (commit.status !== 0) {
     warnings.push(`git commit failed: ${(commit.stderr || "").trim().slice(0, 200)}`);
     return { committed: null };

@@ -14,6 +14,26 @@ banners and headers. Apply it inside the `copywriter` agent when operating in `m
 
 ---
 
+## 0. Core Principle — Always Drive the Online Booking (overrides everything below)
+
+EzGo is a **booking engine**. Every asset exists to convert a viewer into an online reservation.
+Therefore **all copy must drive toward booking online (הנעה למכירה אונליין)** — this is the
+non-negotiable spine that the 3 styles below decorate, never replace.
+
+- Each headline must leave the reader pulled toward *acting now*, not merely admiring the place.
+- The booking CTA — **"הזמינו אונליין"** (or a venue-fitting variant: "שריינו את המקום שלכם",
+  "הזמינו עכשיו") — is **mandatory on every banner**, regardless of style. There is no
+  "awareness only / no CTA" mode for EzGo assets.
+- The 3 styles (direct / emotional / adventurous) differ only in **how** they motivate the booking:
+  - *Direct* — names the action outright.
+  - *Emotional* — makes the reader want it, then the CTA converts the want.
+  - *Adventurous* — frames booking as the bold/identity choice.
+- Even atmospheric, minimal designs keep the booking CTA present and legible.
+
+If a generated headline could sit happily on a poster with no booking intent, it is **off-strategy** — regenerate it.
+
+---
+
 ## 1. The 3 Required Styles — Explained
 
 Every generation round produces exactly one headline per style.
@@ -117,6 +137,7 @@ Use `brand_profile.target_audience` and `tone` to choose register.
 
 Before returning options to the orchestrator, verify each headline:
 
+- [ ] **Drives the online booking (§0)** — the headline pulls toward reserving now, not just admiring the place
 - [ ] **Word count:** 4–8 words (English) / 3–6 words (Hebrew)
 - [ ] **No punctuation** except minimal commas — no exclamation marks, no ellipsis (unless adventurous style)
 - [ ] **Specific to the venue's vertical** — could not apply to any random hotel

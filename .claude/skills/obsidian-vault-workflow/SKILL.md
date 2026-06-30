@@ -5,7 +5,7 @@ description: "Enforce the mandatory Obsidian vault read/write protocol for this 
 
 # Obsidian Vault Workflow
 
-The project vault at `vault/` is Claude Code's long-term memory for AI Content OS. It is organized **one file per topic** — the file contains a persistent Overview (what the topic is) plus a Session Log of dated compact summaries. Reading the relevant topic file before work and appending a session entry after work is **mandatory**.
+The project vault at `banner_create/` is Claude Code's long-term memory for AI Content OS. It is organized **one file per topic** — the file contains a persistent Overview (what the topic is) plus a Session Log of dated compact summaries. Reading the relevant topic file before work and appending a session entry after work is **mandatory**.
 
 ## When to Invoke
 
@@ -32,9 +32,9 @@ State the task's topic in one short phrase (e.g. "email cron hardening", "publis
 
 Regardless of topic file presence, also read:
 
-- `vault/Meeting Notes/` — list the directory, read the **2–3 most recent** entries (sort by last session date inside the file, or by filename).
-- `vault/Content Briefs/` — scan for briefs whose titles match the task domain; read any plausibly related.
-- `vault/Brand Guidelines/` — read if the task touches content, channels, UI, copy, or design.
+- `banner_create/Meeting Notes/` — list the directory, read the **2–3 most recent** entries (sort by last session date inside the file, or by filename).
+- `banner_create/Content Briefs/` — scan for briefs whose titles match the task domain; read any plausibly related.
+- `banner_create/Brand Guidelines/` — read if the task touches content, channels, UI, copy, or design.
 
 ### 4. Report what you pulled
 
@@ -50,11 +50,11 @@ You are not done until the topic file is updated AND verified.
 
 | Task type | Folder |
 |---|---|
-| Feature / code / bugfix / refactor | `vault/Meeting Notes/` |
-| Architecture / design decision | `vault/Meeting Notes/` |
-| Content creation / editorial work | `vault/Content Briefs/` or `vault/Publishing Log/` |
-| Publishing execution / post-mortem | `vault/Publishing Log/` |
-| Brand / visual / tone decision | `vault/Brand Guidelines/` |
+| Feature / code / bugfix / refactor | `banner_create/Meeting Notes/` |
+| Architecture / design decision | `banner_create/Meeting Notes/` |
+| Content creation / editorial work | `banner_create/Content Briefs/` or `banner_create/Publishing Log/` |
+| Publishing execution / post-mortem | `banner_create/Publishing Log/` |
+| Brand / visual / tone decision | `banner_create/Brand Guidelines/` |
 
 Write creates parent directories automatically.
 
@@ -159,10 +159,10 @@ Only after verification may you claim the task is complete.
 
 Create any of these on first use:
 
-- `vault/Meeting Notes/` — code, architecture, decisions, session logs
-- `vault/Content Briefs/` — editorial briefs, campaign specs
-- `vault/Publishing Log/` — publish runs, outcomes, post-mortems
-- `vault/Brand Guidelines/` — voice, visuals, tone, UI primitives
+- `banner_create/Meeting Notes/` — code, architecture, decisions, session logs
+- `banner_create/Content Briefs/` — editorial briefs, campaign specs
+- `banner_create/Publishing Log/` — publish runs, outcomes, post-mortems
+- `banner_create/Brand Guidelines/` — voice, visuals, tone, UI primitives
 
 Inside each folder, one `.md` per topic, plus an `_index.md` listing every topic in the folder with a one-line description.
 
@@ -199,7 +199,7 @@ When you create a new topic file, immediately add a line to the matching folder'
 - ❌ Skipping `- **Related:**` or leaving it empty without `none (first entry on this topic)`
 - ❌ Using markdown links `[text](file.md)` inside the vault instead of `[[wikilinks]]`
 - ❌ Dumping a diff or full commit message into the entry — summarize *why* and *what mattered*, git owns line-by-line
-- ❌ Creating the note in the repo root, `src/`, or anywhere outside `vault/`
+- ❌ Creating the note in the repo root, `src/`, or anywhere outside `banner_create/`
 - ❌ Declaring the task done without the Read-back verification step
 
 ---
