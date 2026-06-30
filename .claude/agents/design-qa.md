@@ -98,9 +98,9 @@ If a logo is present, read the banner image and verify the logo sits in the top 
 Downscale the banner to 50% (≈155×300) and read it — confirm the headline is still readable.
 Illegible → minor defect `illegible_at_50pct`.
 
-### G. No text baked into background
-Confirm no stray letterforms/watermarks in the background imagery (the gpt-image prompts forbid
-text). Visible text artifacts → minor defect `bg_text_artifact`.
+### G. Text rendering (mode-aware)
+- **`design_mode: full` (Nano Banana — default):** the Hebrew headline is rendered **into** the image. Verify it is **spelled correctly, fully formed (no garbled/cut letters), right-to-left, and legible**. Wrong spelling / reversed / garbled Hebrew → **blocking** defect `hebrew_render_bad`. Any *unintended* extra text/watermark → minor `bg_text_artifact`.
+- **`design_mode: background` (Canva adds text):** the background must carry NO baked text — confirm no stray letterforms/watermarks in the imagery. Visible text artifacts → minor defect `bg_text_artifact`.
 
 ---
 
@@ -108,7 +108,7 @@ text). Visible text artifacts → minor defect `bg_text_artifact`.
 
 | Severity | Examples | Resulting status |
 |----------|----------|------------------|
-| Blocking | wrong dimensions, contrast < 4.5:1, RTL reversed | `fail` |
+| Blocking | wrong dimensions, contrast < 4.5:1, RTL reversed, garbled/misspelled Hebrew (`hebrew_render_bad`, full mode) | `fail` |
 | Minor | palette drift, logo crowding, slight illegibility, bg artifact | `options` |
 | None | all gates pass | `ok` |
 

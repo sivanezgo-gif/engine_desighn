@@ -207,15 +207,16 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
 3. **Gate 4a** via AskUserQuestion (4 options): 3 directions + "הצג 3 חדשות". No images exist yet at this stage, so put each direction's **palette as colour-swatch text** in the option `preview` (the hex list + the one-line description), not an image.
 4. Update `last_completed_step = "skill4_directions"`.
 
-### Phase 4b — Background Generation
+### Phase 4b — Design Generation (Nano Banana, full-design mode)
 
 1. **Cost guard:** if `session_state.openai_call_count >= 30` (we'll add 6 more, total 36+):
    ```
-   AskUserQuestion: "כבר ביצענו {n} קריאות OpenAI (~${n*0.05}). להמשיך?"
+   AskUserQuestion: "כבר ביצענו {n} קריאות ייצור תמונה (ננו בננה Pro, ~${n*0.13}). להמשיך?"
      - "כן — המשך"
      - "לא — חזור לבחירת כיוון" (back to 4a)
    ```
-2. Invoke `canva-designer` (`phase=backgrounds`) with `selected_direction`.
+   (`openai_call_count` is the generic per-session image-generation counter — it now tracks Nano Banana calls.)
+2. Invoke `canva-designer` (`phase=backgrounds`) with `selected_direction`, `design_mode:"full"`, and `logo_local_path` (from asset-forge).
 3. Apply `state_patch` (increment `openai_call_count` by 6).
 4. Expected: `{status:"options", options:[{id:"a",banner:"...",header:"..."},{id:"b",...},{id:"c",...}]}`.
 5. **Gate 4b** via AskUserQuestion (5 options): 3 pairs + "הפק 3 חדשות (אותו כיוון)" + "כיוון אחר (חזור ל-4a)". Give each pair option a `preview` with its banner background image (C3 convention): `![set](./output/{session_id}/backgrounds/set_{id}_banner_1024x1984.png)` (absolute path if needed).
