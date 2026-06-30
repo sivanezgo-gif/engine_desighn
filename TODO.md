@@ -10,8 +10,11 @@
 
 - [x] [2026-06-04] Canva: כל פעולות ה-compose אומתו חי ✅
   - הקשר: כל זרימת ה-compose אומתה מקצה-לקצה: generate-design → create-design-from-candidate → resize(310×600) → replace_text (עברית RTL) → format_text → **update_fill** (רקע) → **insert_fill** (לוגו) → commit → export → validate — הכול עבר, כולל `logo_size`. נותר רק: ריצת `/banner-create` אינטראקטיבית מלאה (פריט D4 נפרד למטה). ידוע: `font_family` לא ניתן להגדרה דרך ה-API (יורשים מהמועמד); כותרת ארוכה גולשת ועלולה לחפוף.
-- [ ] [2026-06-04] Canva: בדיקת end-to-end מלאה של `/banner-create` (D4)
-  - הקשר: ה-PostToolUse hook **אומת חי** מול export אמיתי + הוקשח (✅ commit `15c5eff`). נותר לאמת חי (אחרי תיקון Step 5c): רינדור ה-`preview` בשערים, יצירת 3 הוריאציות, הולידציה המלאה (contrast/logo/legibility) על PNG אמיתי, ואזהרות ה-cross-session (C4).
+- [ ] [2026-06-30] Infra: להוסיף הרשאה ל-`gemini_image.js` ב-`.claude/settings.json` (פעולת משתמשת)
+  - הקשר: צריך `"Bash(node scripts/gemini_image.js:*)"` ב-allow-list (ליד `openai_image.js`). ה-auto-classifier חסם ל-Claude לערוך הרשאות, אז זה ידני. בלי זה canva-designer יקבל prompt הרשאה בכל ריצת ננו בננה. הסקריפט עצמו רץ תקין.
+  - עדיפות: גבוהה
+- [ ] [2026-06-30] Banner: בדיקת end-to-end מלאה של `/banner-create` עם **ננו בננה (מצב full)** (D4)
+  - הקשר: המנוע + `resize.js` אומתו חי בנפרד (באנר 310×600 + הדר 1366×200 עם עברית תקינה). נותר לאמת ריצה אינטראקטיבית מלאה: שערים 4a→4b→4d, יצירת 3 וריאציות full-design דרך canva-designer, העברת `logo_local_path` כ-`--ref`, ולידציית `design-qa` (כולל החסימה החדשה `hebrew_render_bad`), ואזהרות cross-session (C4). מסלול ה-`background` (gpt-image + Canva) נשאר כ-fallback לבדיקה נפרדת.
   - עדיפות: גבוהה
 - [ ] [2026-06-04] Canva: ה-MCP מתנתק לסירוגין
   - הקשר: שרת העיצוב (`a51234ff…`) התנתק פעמיים במהלך העבודה (כולל אחרי restart — חזר רק בריענון נוסף). לעקוב; אם חוזר, לבדוק את הגדרת ה-connector.
@@ -20,8 +23,8 @@
 ### חסום בטוקן (פעולת משתמשת)
 
 - [ ] [2026-06-04] Infra: B1 — Replicate (מודלי תמונה נוספים)
-  - הקשר: לכתוב `scripts/replicate_image.js` (אותו ממשק `--prompt/--size/--out` כמו openai_image.js, כולל אותו fallback ל-`.env` הראשי) + לרשום Replicate MCP, כדי להפעיל flux/recraft/ideogram. כרגע canva-designer נופל ל-gpt-image. חסום עד פתיחת חשבון Replicate + `REPLICATE_API_TOKEN`.
-  - עדיפות: בינונית
+  - הקשר: לכתוב `scripts/replicate_image.js` (אותו ממשק `--prompt/--size/--out` כמו openai_image.js, כולל אותו fallback ל-`.env` הראשי) + לרשום Replicate MCP, כדי להפעיל flux/recraft/ideogram. **דורג מטה (2026-06-30):** ננו בננה (Gemini) הוא עכשיו מנוע ברירת המחדל ובעל יכולת עיצוב-מלא, כך ש-Replicate הפך לתוספת אופציונלית בלבד — לא נחוץ לזרימה. חסום עד פתיחת חשבון Replicate + `REPLICATE_API_TOKEN`.
+  - עדיפות: נמוכה
 - [ ] [2026-06-04] Infra: B2 — Unsplash (תמונות סטוק)
   - הקשר: Unsplash MCP לתמונות reference בכיווני העיצוב ול-fallback כשאין og:image. חסום עד פתיחת חשבון + `UNSPLASH_ACCESS_KEY`.
   - עדיפות: בינונית
@@ -42,6 +45,9 @@
   - עדיפות: נמוכה
 - [ ] [2026-06-04] Brand: פילטר צבע גנרי (כחול שמיים/אוקיינוס) — אופציונלי
   - הקשר: כרגע מטופל ע"י הדגל `needs_user_confirmation` + שער משתמש; רשימת פילטר קשיחה היא שיפור אופציונלי (architecture-overview שאלה D4).
+  - עדיפות: נמוכה
+- [ ] [2026-06-30] DX: לשנות שם `openai_call_count` → שם גנרי (`image_call_count`)
+  - הקשר: המונה סופר עכשיו קריאות ננו בננה אבל עדיין נושא שם OpenAI. נגיעה ב-`banner-orchestrator` + `orchestration-protocol` (state shape + state_patch). קוסמטי בלבד.
   - עדיפות: נמוכה
 
 ---
@@ -74,3 +80,12 @@
 - [x] [2026-06-04] **Phase C** — ולידציה אוטומטית (`validate_export.js` + PostToolUse hook); 3 וריאציות + שער בחירה (4d); שערים חזותיים; cross-session חי (אזהרות פלטה + כותרת).
 - [x] [2026-06-04] **Phase D** — 2 skills (advanced-color-theory, photography-composition); עדכון architecture-overview + cross-session-consistency + CLAUDE.md (סטאק).
 - [x] [2026-06-04] תיקון: `openai_image.js` נופל ל-`.env` של הריפו הראשי (עובד מה-worktree).
+
+### 2026-06-30 — הגירה לננו בננה (Gemini) במקום gpt-image
+
+- [x] **מנוע**: `scripts/gemini_image.js` חדש (Nano Banana Pro, `gemini-3-pro-image-preview`) — תומך `--ref` (תמונות-ייחוס) ומיפוי `--size`→aspect. החליף את gpt-image כברירת מחדל. **נבדק חי** — רינדור עברית תקין (RTL, איות).
+- [x] **מצב full**: `canva-designer` מרנדר עיצוב שלם כולל עברית; `design_mode:"background"` (gpt-image+Canva) נשאר fallback. invariant #1 (RTL) נכתב מחדש; `design-qa` מאמת עברית בתמונה (`hebrew_render_bad`).
+- [x] **`resize.js`**: באנר → `fit:'cover'` (לא מעוות טקסט צרוב); הדר → crop ממורכז דינמי. אומת חי על פלט ננו בננה.
+- [x] **לוגו**: ה-orchestrator שומר `logo_local_path` ומעביר אותו כ-`--ref` ל-canva-designer.
+- [x] **vault**: הזיכרון עבר ל-`banner_create/` ונכנס ל-git (ללא `.obsidian/`); `CLAUDE.md` + `sync_vault.js` + סקיל + `.gitignore` מצביעים אליו.
+- נדחף לענף `nano-banana` (PR ל-main).

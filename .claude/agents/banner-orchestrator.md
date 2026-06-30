@@ -49,6 +49,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
      "status": "in_progress",
      "canva_assets": {
        "logo_asset_id": null,
+       "logo_local_path": null,
        "banner_bg_asset_id": null,
        "header_bg_asset_id": null,
        "banner_design_id": null,
@@ -155,7 +156,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
    - **Gate 2B** via AskUserQuestion (4 options): the 3 candidates + "להמשיך בלי לוגו". **Visual preview convention (C3):** give each candidate option a `preview` with its image — prefer the `thumbnail_url` from brand-researcher (an http URL, which renders most reliably) as `![cand](thumbnail_url)`. The same convention applies to every gate where the final look is decided — Gates 1 (logo + palette), 2A (cleaned logo), 3 (headline mocks), 4b (backgrounds) and 4d (variants). If a preview does not render as an image in the user's client, the URL/path still shows — graceful degradation.
    - On select 1/2/3: re-invoke brand-researcher with `--mode=logo --selected_candidate_id={id}` to finalize (create-design-from-candidate + upload + EXIF stamp).
    - On "ללא לוגו": set `brand_profile.logo.skipped = true` (Edit) and continue.
-3. Update `session_state.canva_assets.logo_asset_id` and `last_completed_step = "skill2"`.
+3. Update `session_state.canva_assets.logo_asset_id` **and `logo_local_path`** (from the envelope's `artifacts.logo_path` — the cleaned post-rembg/upscale PNG; Nano Banana full-design mode passes it as a `--ref`), and `last_completed_step = "skill2"`. If the logo was skipped, leave `logo_local_path` null.
 
 ---
 
@@ -216,7 +217,7 @@ You are invoked by the `/banner-create` slash command (or directly by a user) wi
      - "לא — חזור לבחירת כיוון" (back to 4a)
    ```
    (`openai_call_count` is the generic per-session image-generation counter — it now tracks Nano Banana calls.)
-2. Invoke `canva-designer` (`phase=backgrounds`) with `selected_direction`, `design_mode:"full"`, and `logo_local_path` (from asset-forge).
+2. Invoke `canva-designer` (`phase=backgrounds`) with `selected_direction`, `design_mode:"full"`, and `logo_local_path` (from `session_state.canva_assets.logo_local_path`, set in Phase 2; null if the logo was skipped).
 3. Apply `state_patch` (increment `openai_call_count` by 6).
 4. Expected: `{status:"options", options:[{id:"a",banner:"...",header:"..."},{id:"b",...},{id:"c",...}]}`.
 5. **Gate 4b** via AskUserQuestion (5 options): 3 pairs + "הפק 3 חדשות (אותו כיוון)" + "כיוון אחר (חזור ל-4a)". Give each pair option a `preview` with its banner background image (C3 convention): `![set](./output/{session_id}/backgrounds/set_{id}_banner_1024x1984.png)` (absolute path if needed).

@@ -6,8 +6,10 @@
  *   node scripts/resize.js --input <src.png> --kind banner --output <dst.png>
  *   node scripts/resize.js --input <src.png> --kind header --output <dst.png>
  *
- * Banner: source 1024x1984 → 310x600 via pure resize (fit:'fill').
- * Header: source 2304x800  → 1366x200 via width-resize (1366x474) then center-crop top 137, height 200.
+ * Banner: any portrait source → 310x600 via aspect-preserving crop (fit:'cover'),
+ *         so baked-in text/logos (Nano Banana full-design mode) are never stretched.
+ * Header: any wide source → width-resize to 1366, then center-crop a 1366x200 band
+ *         (crop offset computed from the actual resized height — works for any aspect).
  *
  * Asserts final dimensions and exits non-zero on mismatch.
  *
@@ -64,19 +66,33 @@ if (!TARGETS[kind]) {
 (async () => {
   try {
     if (kind === "banner") {
-      // Banner: 1024x1984 (≈0.516 aspect) → 310x600 (≈0.517 aspect). Pure fill resize.
+      // Banner: preserve aspect and CROP to 310x600 (cover), never stretch — protects
+      // the Hebrew text + logo baked in by Nano Banana full-design mode. A near-square-
+      // ratio source (old gpt-image 1024x1984 ≈ target) loses essentially nothing; a
+      // 9:16 Nano Banana source gets a small symmetric crop instead of a vertical squish.
       await sharp(input)
-        .resize(310, 600, { fit: "fill" })
+        .resize(310, 600, { fit: "cover", position: "centre" })
         .png()
         .toFile(output);
     } else {
-      // Header: 2304x800 → resize width to 1366 → 1366x474 → center-crop to 1366x200.
-      // top = round((474 - 200) / 2) = 137
-      await sharp(input)
-        .resize(1366, null) // width=1366, preserve aspect → height becomes 1366*800/2304 ≈ 474
-        .extract({ left: 0, top: 137, width: 1366, height: 200 })
-        .png()
-        .toFile(output);
+      // Header: resize width to 1366 (preserve aspect), then center-crop a 1366x200 band.
+      // The crop offset is derived from the ACTUAL resized height, so it self-centers for
+      // any source aspect (gpt-image 2304x800 → 474; Nano Banana 21:9 → ~585; etc.).
+      const resizedBuf = await sharp(input).resize(1366, null).png().toBuffer();
+      const rm = await sharp(resizedBuf).metadata();
+      if (rm.height >= 200) {
+        const top = Math.round((rm.height - 200) / 2);
+        await sharp(resizedBuf)
+          .extract({ left: 0, top, width: 1366, height: 200 })
+          .png()
+          .toFile(output);
+      } else {
+        // Source too short after width-resize to yield a 200px band — cover-crop to target.
+        await sharp(input)
+          .resize(1366, 200, { fit: "cover", position: "centre" })
+          .png()
+          .toFile(output);
+      }
     }
 
     const meta = await sharp(output).metadata();
