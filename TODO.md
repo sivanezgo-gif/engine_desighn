@@ -16,15 +16,12 @@
 - [~] [2026-07-01] Banner: D4 — ריצת `/banner-create` מלאה עם **ננו בננה (מצב full)** — **הזרימה עובדת**, נותרו תיקוני אינטגרציה
   - הקשר: הורץ חי מקצה-לקצה על לקוח "המושבה" (main-thread orchestration): מחקר → לוגו → כותרת → כיוון → **עיצוב מלא (עברית+לוגו+CTA)** → resize → validate = **pass**. הפלט ברמת סטודיו, עברית מושלמת. נותר: (א) ריצה אוטומטית דרך ה-orchestrator (ראה ממצא F1 למטה — כרגע חייב main-thread), (ב) יצירת 3 וריאציות אוטומטית ב-canva-designer, (ג) `design-qa` אוטומטי.
   - עדיפות: גבוהה
-- [ ] [2026-07-01] F1 — ה-orchestrator לא יכול לרוץ כסוכן-רקע (קינון סוכנים + שערי AskUserQuestion לא עובדים משם)
-  - הקשר: הפקודה `/banner-create` מדפצ'ת את `banner-orchestrator` כ-subagent, אבל sub-agent לא יכול לפתוח שערים למשתמש ולא לקנן sub-agents. חייב לרוץ מה-thread הראשי. לתקן את הפקודה/סקיל כך שהסוכן הראשי יבצע את פרוטוקול ה-orchestration ישירות.
-  - עדיפות: גבוהה
-- [ ] [2026-07-01] F2 — יצירת לוגו: להעביר מ-Canva לננו בננה
-  - הקשר: `brand-researcher` Branch B מייצר לוגו דרך Canva `generate-design`, אבל **הסיום שבור** (חסרים `export-design`/`start-editing-transaction` ב-toolset שלו — נכשל בהורדת ה-PNG). ננו בננה מייצר לוגו מצוין בקריאה אחת (אומת חי — סמל המושבה). לעדכן את Branch B להשתמש ב-`gemini_image.js` (+ rembg לשקיפות), ולוותר על מסלול Canva ללוגו.
-  - עדיפות: גבוהה
-- [ ] [2026-07-01] F3 — `gemini_image.js`: crash ב-exit (libuv/Windows)
-  - הקשר: לסירוגין, `process.exit(0)` אחרי fetch מפעיל "Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)". קורה **אחרי** שה-PNG נכתב וה-JSON הודפס, אז הפלט תקין — אבל exit code הופך ל-127. להקשיח את היציאה (flush stdout → exit), ולוודא שקוראים מסתמכים על שורת ה-JSON, לא על exit code.
-  - עדיפות: בינונית
+- [x] [2026-07-01] F1 — ה-orchestrator חייב לרוץ מה-thread הראשי ✅ תוקן
+  - הקשר: הפקודה `/banner-create` דיפצ'תה את `banner-orchestrator` כ-subagent, אבל sub-agent לא יכול לפתוח שערים למשתמש ולא לקנן sub-agents. **תוקן:** שוכתבה `banner-create.md` כך שהסוכן הראשי מריץ את פרוטוקול ה-orchestration ישירות (מדפצ'ת רק את 3 ה-workers), + הבהרת "מודל הרצה" בראש `banner-orchestrator.md`. נותר לאמת ב-`/banner-create` אמיתי.
+- [x] [2026-07-01] F2 — יצירת לוגו הועברה מ-Canva לננו בננה ✅ תוקן
+  - הקשר: מסלול Canva ל-Branch B היה שבור (חסרים כלי export). **תוקן:** `brand-researcher` Branch B משוכתב להשתמש ב-`gemini_image.js` (3 סגנונות → נתיבים מקומיים, בלי URLs שפגים) + rembg לשקיפות + EXIF disclosure. אומת חי (סמל המושבה).
+- [x] [2026-07-01] F3 — `gemini_image.js` exit crash (libuv/Windows) ✅ תוקן
+  - הקשר: `process.exit(0)` אחרי fetch הפעיל assertion של libuv לסירוגין. **תוקן:** `cleanExit()` — מגדיר `exitCode` ונותן ל-event loop להתנקז טבעית; timer מושהה (unref) יוצא רק אחרי חלון שקט. נבדק (exit 0, בלי crash, בלי hang). קוראים חדשים מסתמכים על שורת ה-JSON.
 - [ ] [2026-06-04] Canva: ה-MCP מתנתק לסירוגין
   - הקשר: שרת העיצוב (`a51234ff…`) התנתק פעמיים במהלך העבודה (כולל אחרי restart — חזר רק בריענון נוסף). לעקוב; אם חוזר, לבדוק את הגדרת ה-connector.
   - עדיפות: בינונית

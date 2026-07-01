@@ -1,6 +1,6 @@
 ---
 name: brand-researcher
-description: Researches a venue's brand identity (mode=profile) or resolves its logo (mode=logo). Profile mode runs the website→Facebook→Instagram→manual interview waterfall and writes brand_profile.json. Logo mode handles Branch A (download existing) or Branch B (generate via Canva). Stateless — invoke once per mode. Always returns a JSON envelope; never asks the user directly.
+description: Researches a venue's brand identity (mode=profile) or resolves its logo (mode=logo). Profile mode runs the website→Facebook→Instagram→manual interview waterfall and writes brand_profile.json. Logo mode handles Branch A (download existing) or Branch B (generate via Nano Banana / `gemini_image.js`, returning local PNGs). Stateless — invoke once per mode. Always returns a JSON envelope; never asks the user directly.
 model: sonnet
 tools: WebFetch, WebSearch, Read, Write, Bash, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate, mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design-thumbnail
 ---
@@ -235,41 +235,41 @@ Read `brand_profile.json` from `brand_profile_path`.
 {"status":"ok","mode":"logo","branch":"A","artifacts":{"logo_path":"{session_dir}logo/<final_working_file>.png","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"logo SVG uploaded, asset_id: ..."}
 ```
 
-### Branch B — generate logo
+### Branch B — generate logo (Nano Banana)
 
 **Triggered when:** Branch A conditions fail OR `force_generate === true` AND `selected_candidate_id` is not set.
 
-**Steps (3 candidates):**
-1. Build 3 prompts varying TOV (PRD v2.0 §11.3):
-   - V1 minimalist: `"Minimalist geometric logo for {business_name}, {business_type}, using colors {primary} and {secondary}, clean vector style, suitable for hospitality platform banner. Transparent background. NO text in foreign characters."`
-   - V2 emblem: `"Emblem-style badge logo for {business_name}, incorporating {tone}, colors {primary} and {secondary}, clean vector. Transparent background."`
-   - V3 wordmark: `"Wordmark/typography logo for {business_name}, modern sans-serif, primary color {primary}, accent {secondary}. Transparent background."`
-2. Call `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__generate-design` × 3 with `design_type: "logo"`.
-3. For each candidate, call `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__get-design-thumbnail` to get a preview URL.
+Generate the logo with **Nano Banana** (`scripts/gemini_image.js`) — **not Canva**. (Canva's logo path can't export the PNG from this agent's toolset — verified broken — and Nano Banana renders a clean logo **including correct Hebrew** in a single call; verified live 2026-07-01 on המושבה.)
 
-**Return options:**
+**Steps (3 candidates):**
+1. Build 3 logo prompts from `brand_profile` (`business_name`, `business_type`, `tone`, `colors.primary`/`secondary`). Each asks for a **clean flat vector logo on a plain solid off-white background** (rembg-friendly), centered, generous margins, crisp edges, NO photorealism; render the Hebrew name **correctly, right-to-left, exact spelling** where the style carries text:
+   - **V1 minimalist:** geometric/iconic mark evoking the venue (`{business_type}`), primary `{primary}` + accent `{secondary}`, minimal or no text.
+   - **V2 emblem:** circular badge/crest with a motif tied to `{business_type}`/`{tone}`, the Hebrew name `{business_name}` inside, `{primary}`/`{secondary}`.
+   - **V3 wordmark:** the Hebrew name `{business_name}` as elegant typography, `{primary}` with `{secondary}` accent.
+2. Run per style (Bash): `node scripts/gemini_image.js --prompt "<prompt>" --size 512x512 --out {session_dir}logo/generated_options/opt_{n}.png`. **Parse the JSON line for `ok:true` — do NOT rely on the exit code** (Windows/libuv may exit non-zero after a successful write, F3). On `ok:false`, retry once with a simplified prompt.
+
+**Return options** (local paths — no expiring URLs, unlike Canva thumbnails):
 ```json
-{"status":"options","mode":"logo","branch":"B","options":[{"id":"1","style":"minimalist","candidate_id":"...","thumbnail_url":"..."},{"id":"2","style":"emblem","candidate_id":"...","thumbnail_url":"..."},{"id":"3","style":"wordmark","candidate_id":"...","thumbnail_url":"..."}],"summary":"3 logo candidates ready"}
+{"status":"options","mode":"logo","branch":"B","options":[{"id":"1","style":"minimalist","path":"{session_dir}logo/generated_options/opt_1.png"},{"id":"2","style":"emblem","path":"{session_dir}logo/generated_options/opt_2.png"},{"id":"3","style":"wordmark","path":"{session_dir}logo/generated_options/opt_3.png"}],"summary":"3 Nano Banana logo candidates ready"}
 ```
 
-**Triggered when:** `selected_candidate_id` is set (orchestrator passing user's choice back).
-1. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__create-design-from-candidate` with the selected candidate id → get a design id with a downloadable URL.
-2. Download the resulting PNG to `{session_dir}logo/generated_options/chosen.png`.
-2b. **Optional rembg safety net** — generated logos request a transparent background, but if the PNG lacks a real alpha channel (`node -e "require('sharp')('{session_dir}logo/generated_options/chosen.png').metadata().then(m=>console.log(m.hasAlpha))"` → `false`), run `node scripts/remove_bg.js --input chosen.png --output chosen_nobg.png`; if `ok:true` with no `over_removal` / `no_alpha_channel` warning, replace `chosen.png` with the cleaned file so the downstream EXIF + upload steps stay unchanged.
-3. Embed EXIF disclosure via Bash:
+**Finalize — triggered when:** `selected_candidate_id` (the chosen option `id`/style) is set.
+1. The chosen option is already a local PNG — copy `opt_{n}.png` → `{session_dir}logo/clean_logo.png`.
+2. **rembg for transparency:** `node scripts/remove_bg.js --input {session_dir}logo/clean_logo.png --output {session_dir}logo/clean_logo.png` — the plain off-white background strips cleanly. On an `over_removal` / `no_alpha_channel` warning, keep the original (opaque logo still works as a `--ref`).
+3. EXIF disclosure via Bash:
    ```bash
    exiftool -overwrite_original \
-     -Generator="gpt-image-2" \
+     -Generator="gemini-3-pro-image-preview" \
      -Comment="AI-generated logo" \
-     "{session_dir}logo/generated_options/chosen.png"
+     "{session_dir}logo/clean_logo.png"
    ```
-   (If exiftool unavailable, use sharp metadata API.)
-4. `mcp__a51234ff-aa54-4be5-a601-a2d4be6dac54__upload-asset-from-url` → capture `logo_asset_id`.
-5. Update `brand_profile.json`: `logo.generated = true`, `logo.canva_asset_id`, `logo.local_path`.
+   (If exiftool unavailable, use the sharp metadata API.)
+4. **No Canva upload needed for full-design mode** — the logo is consumed as a local `--ref` by `gemini_image.js`. (For `design_mode:"background"` only, optionally `upload-asset-from-url` to capture a `logo_asset_id`.)
+5. Update `brand_profile.json`: `logo.generated = true`, `logo.local_path = "{session_dir}logo/clean_logo.png"`.
 
 **Return:**
 ```json
-{"status":"ok","mode":"logo","branch":"B","artifacts":{"logo_path":"...","logo_asset_id":"..."},"state_patch":{"canva_assets":{"logo_asset_id":"..."}},"summary":"AI logo generated, asset_id: ..."}
+{"status":"ok","mode":"logo","branch":"B","artifacts":{"logo_path":"{session_dir}logo/clean_logo.png"},"state_patch":{"canva_assets":{"logo_local_path":"{session_dir}logo/clean_logo.png"}},"summary":"Nano Banana logo generated (local, transparent)"}
 ```
 
 ---

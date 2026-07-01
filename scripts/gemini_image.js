@@ -150,6 +150,20 @@ fs.mkdirSync(path.dirname(outPath), { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Clean exit that dodges an intermittent Windows/libuv crash:
+//   "Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)"
+// which fires when process.exit() runs at the moment undici (global fetch) is
+// closing a keep-alive TLS socket. We set exitCode and let the event loop drain
+// NATURALLY (no process.exit → no assertion). undici's keep-alive socket can hold
+// the loop open for a few seconds, so an unref'd timer force-exits after a short
+// quiet window — by then the socket is idle (not mid-close), so exiting is safe.
+// The JSON envelope is already printed before this, so callers must key off the
+// JSON line, not the exit code.
+function cleanExit(code) {
+  process.exitCode = code;
+  setTimeout(() => process.exit(code), 150).unref();
+}
+
 async function callGemini() {
   // Order matters for editing/compositing: reference images first, then the text
   // instruction that tells the model what to do with them.
@@ -215,7 +229,8 @@ async function callGemini() {
     try {
       const bytes = await callGemini();
       console.log(JSON.stringify({ ok: true, path: outPath, bytes, attempt, model }));
-      process.exit(0);
+      cleanExit(0);
+      return;
     } catch (err) {
       lastErr = err;
       if ((err.status === 429 || err.status === 503) && attempt < maxRetries) {
@@ -231,5 +246,5 @@ async function callGemini() {
     }
   }
   console.error(JSON.stringify({ ok: false, error: String(lastErr && lastErr.message) }));
-  process.exit(1);
+  cleanExit(1);
 })();
