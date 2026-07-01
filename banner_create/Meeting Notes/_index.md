@@ -7,6 +7,9 @@ Technical documentation for every code, agent, command, script, and config file 
 ### Completed clients
 - [[completed-client-hamoshava]] — המושבה, session hamoshava-20260609-110009, completed 2026-06-10, v2_bold chosen
 
+### Test runs & findings
+- [[nano-banana-d4-test]] — first full-flow Nano Banana test (המושבה, 2026-07-01): flow works; findings F1 (orchestrator must be main-thread), F2 (logo→Nano Banana), F3 (libuv exit)
+
 ### Architecture
 - [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + scripts
 - [[sqlite-brand-registry]] — cross-session brand memory: clients, palettes (ΔE76), headlines (Jaccard), assets
