@@ -278,6 +278,7 @@ top of a cooler primary (navy for Caesarea).
 - Pick the CTA color from the venue's palette — typically the **warm accent**, so it stays a high-affordance focal point against the background photo.
 - Coordinate it with the platform button theme (see §9.7) so the whole page feels like one brand.
 - The CTA still needs clear button affordance and contrast **against the photo behind it** — that legibility requirement is separate from, and survives, any platform theming.
+- **Finish: glossy/metallic, not flat.** Client preference (confirmed live, 2026-07-02) — give the CTA button a subtle glossy/metallic sheen (a bright specular highlight streak across the top, soft reflective shine, premium polished-metal look) rather than a flat matte fill. Applies to every banner CTA by default, in full-design (Nano Banana) mode.
 
 **Avoid:** bright saturated primaries (electric blue, fire red), gradients from one vivid color to another. (Note: a bottom-edge dark scrim for text legibility — see Pattern 4 — is fine and may exceed 40% locally; the 40% cap applies to overlays across the *whole* image.)
 
