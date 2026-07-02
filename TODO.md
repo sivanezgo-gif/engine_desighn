@@ -15,6 +15,10 @@
   - עדיפות: גבוהה
 - [x] [2026-07-01] Infra: למזג/לדחוף את `nano-banana` → `main` ב-GitHub ✅ בוצע
   - הקשר: סיון דחפה ידנית `git push origin main` ב-2026-07-02 — origin/main מסונכרן (607a4fc). אפשר למחוק את `nano-banana` ב-GitHub (כבר ממוזג).
+- [x] [2026-07-02] Infra: זוהתה + נפתרה בעיית הרשאות push ל-GitHub ✅ תוקן
+  - הקשר: חשבון ה-git המקומי (`sivanwozner-cyber`) לא היה collaborator בריפו `sivanezgo-gif/engine_desighn` — זו הסיבה האמיתית לכישלון "must be a collaborator" ביצירת PR **וגם** ל-403 בדחיפה ישירה. סיון הוסיפה את `sivanwozner-cyber` כ-collaborator ב-GitHub (Settings → Collaborators) — דחיפת ענף `fix-fabricated-building` הצליחה מיד אחרי. **מצביע לעתיד:** אם push/PR נכשל שוב עם שגיאת הרשאות, לבדוק קודם collaborator status, לא רק את מבנה הענפים.
+- [x] [2026-07-02] Banner: מבנים בדויים (AI-invented buildings) נאסרו במצב full ✅ תוקן
+  - הקשר: סיון זיהתה שהבאנר וההדר הראשונים של המושבה כללו מבנה אבן פוטוריאליסטי מומצא — עלול להטעות גולש לגבי איך המקום נראה באמת. **תוקן:** תבניות ה-prompt המלאות ב-`canva-designer` אוסרות מפורשות המצאת מבנים/בתים/גגות אלא אם `background_keywords` מציין בפירוש מבנה **מאומת** של הלקוח; גם נאסרה שכפול אלמנטי טקסט (תוקן גם bug של CTA כפול). `design-qa` קיבל בדיקה **H — No fabricated building** (blocking, `fabricated_building`) + `duplicate_text_element` (minor) בבדיקה G. הסט הסופי של המושבה חודש (נוף בלבד) ואומת. נדחף לענף `fix-fabricated-building` — ממתין ל-PR merge.
 - [~] [2026-07-01] Banner: D4 — ריצת `/banner-create` מלאה עם **ננו בננה (מצב full)** — **הזרימה עובדת**, נותרו תיקוני אינטגרציה
   - הקשר: הורץ חי מקצה-לקצה על לקוח "המושבה" (main-thread orchestration): מחקר → לוגו → כותרת → כיוון → **עיצוב מלא (עברית+לוגו+CTA)** → resize → validate = **pass**. הפלט ברמת סטודיו, עברית מושלמת. נותר: (א) ריצה אוטומטית דרך ה-orchestrator (ראה ממצא F1 למטה — כרגע חייב main-thread), (ב) יצירת 3 וריאציות אוטומטית ב-canva-designer, (ג) `design-qa` אוטומטי.
   - עדיפות: גבוהה
