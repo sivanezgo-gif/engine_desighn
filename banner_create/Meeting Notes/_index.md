@@ -32,7 +32,8 @@ Technical documentation for every code, agent, command, script, and config file 
 - [[banner-create-command]] — `/banner-create [business_name] [url]` thin invoker
 
 ### Scripts (`scripts/`)
-- [[openai-image-script]] — gpt-image-2 background generation CLI
+- [[gemini-image-script]] — Nano Banana (Gemini) full-design generation CLI — the primary image engine
+- [[openai-image-script]] — gpt-image-2 background generation CLI (legacy fallback)
 - [[resize-script]] — sharp resize/crop to final banner/header dimensions
 - [[render-headline-mock-script]] — sharp/Pango RTL headline mock for Gate-3 visual previews
 - [[validate-export-script]] — C1 export quality gate (WCAG contrast / logo size / legibility / dimensions; CLI + PostToolUse hook)

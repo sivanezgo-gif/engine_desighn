@@ -3,17 +3,17 @@
  * sync_vault.js — keep the Obsidian vault in sync from a git worktree.
  *
  * WHY: Work happens inside a git worktree
- *   (<repo>/.claude/worktrees/<id>/vault/), but the user's Obsidian app opens
- *   the MAIN repo vault (<repo>/vault/, where `.obsidian/` lives). Edits made
- *   in the worktree are therefore invisible in Obsidian until the branch is
- *   merged. This script closes that gap on every turn / session end.
+ *   (<repo>/.claude/worktrees/<id>/banner_create/), but the user's Obsidian app
+ *   opens the MAIN repo vault (<repo>/banner_create/, where `.obsidian/` lives).
+ *   Edits made in the worktree are therefore invisible in Obsidian until the
+ *   branch is merged. This script closes that gap on every turn / session end.
  *
  * WHAT IT DOES (both, per user's choice):
- *   1. MIRROR  — copies vault/ from the current worktree into the main repo's
- *                vault/ so updates appear live in Obsidian.
- *   2. COMMIT  — `git commit` of vault/ changes on the worktree branch as a
- *                history safety-net (scoped to the `vault/` pathspec only, so
- *                it never sweeps up staged code).
+ *   1. MIRROR  — copies banner_create/ from the current worktree into the main
+ *                repo's banner_create/ so updates appear live in Obsidian.
+ *   2. COMMIT  — `git commit` of banner_create/ changes on the worktree branch
+ *                as a history safety-net (scoped to the `banner_create/`
+ *                pathspec only, so it never sweeps up staged code).
  *
  * Usage (also wired as Stop + SessionEnd hooks in .claude/settings.json):
  *   node scripts/sync_vault.js [--trigger stop|session-end|manual]
@@ -95,7 +95,7 @@ function findMainRoot() {
 }
 
 // ---------------------------------------------------------------------------
-// Mirror: srcRoot/vault -> mainRoot/vault (skip .obsidian and .git)
+// Mirror: srcRoot/banner_create -> mainRoot/banner_create (skip .obsidian and .git)
 // ---------------------------------------------------------------------------
 const SKIP_DIRS = new Set([".obsidian", ".git"]);
 

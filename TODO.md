@@ -43,9 +43,8 @@
 - [ ] [2026-06-04] Brand: לבנות קובץ design-system ב-Figma
   - הקשר: ה-Figma MCP מאומת חי אבל הקובץ `EzGo-Brand-System` ריק. ה-anchor האופציונלי ב-brand-researcher נשאר רדום עד שיהיו שם פלטות / טיפוגרפיה / קומפוננטות. (חשבון View/Starter — ייתכן שיגביל קריאות Dev-Mode.)
   - עדיפות: בינונית
-- [ ] [2026-06-04] Infra: למזג את הענף `claude/objective-bassi-3b3072` ל-main
-  - הקשר: כל עבודת Phase A–D יושבת על ה-feature branch (~15 קומיטים מעל origin/main). למזג / לפתוח PR אחרי שבדיקת D4 עוברת.
-  - עדיפות: בינונית
+- [x] [2026-06-04] Infra: למזג את הענף `claude/objective-bassi-3b3072` ל-main ✅ בוצע
+  - הקשר: אומת 2026-07-02 — הענף כבר ממוזג במלואו ל-main המקומי; הענף המקומי ושאריות ה-worktree (~70MB) נוקו.
 - [ ] [2026-06-04] Brand: כיול ספי ΔE / Jaccard לפי vertical
   - הקשר: ספי ה-cross-session (פלטה ΔE<10, כותרת Jaccard≥0.7) הם ברירת מחדל גלובלית; ייתכן שיצטרכו כוונון פר-תחום כשיהיו 5+ לקוחות (ראה `cross-session-consistency`).
   - עדיפות: נמוכה

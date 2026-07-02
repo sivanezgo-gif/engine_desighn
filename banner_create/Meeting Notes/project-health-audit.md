@@ -4,10 +4,9 @@
 Periodic whole-project review: git/branch hygiene, config drift, script health, vault/doc accuracy, and open upgrade items. Each session log entry is a dated audit snapshot with findings ranked by severity. Findings that become work items move to `TODO.md`; this file records what was checked and what was found.
 
 ## Open Questions
-- Broken symlink `.claude/skills/brainstorming` (points to the pre-"New folder" path) — delete or recreate? Is the tracked `.agents/skills/brainstorming` used at all?
-- Should `.claude/settings.local.json` be untracked (`git rm --cached` + gitignore)? It carries stale absolute-path allow rules from the old project location.
-- Unused deps in `package.json` (`@anthropic-ai/sdk`, `headroom-ai`) — remove or is something planned for them?
 - וילה סוליס session interrupted mid-profile (host restart, 2026-07-02) — resume `output/vylh-svlys-20260701-165322/` or start fresh?
+- `.claude/settings.local.json` still holds stale old-path allow rules — classifier blocks Claude from rewriting permission files; user can prune manually (keep only the `Skill(banner-create)` entries).
+- `.agents/skills/brainstorming` is tracked but unreferenced (its `.claude/skills/` symlink was broken since the folder move and got removed) — keep, re-link (needs admin for symlinks), or drop from git?
 
 ## Session Log
 
@@ -22,3 +21,9 @@ Periodic whole-project review: git/branch hygiene, config drift, script health, 
   - **Doc drift:** [[architecture-overview]] Overview still says gpt-image default / 3 sub-agents / RTL-split (reality: Nano Banana full-design, 6 sub-agents); `CLAUDE.md` says "5 sub-agents + 5 skills" (actual 6 + 7) and its scripts list omits `compose_banner.js` + `migrate_existing_sessions.js`; wikilink `[[gemini-image-script]]` used in [[nano-banana-d4-test]] but no such topic file exists; `sync_vault.js` header comments still say `vault/` (code correctly uses `banner_create/`); TODO item "merge objective-bassi branch" already done.
   - **Healthy:** brand registry (3 clients), `gemini_image.js` (retries/backoff/cleanExit all sound), resize/validate pipeline, vault sync repointed correctly, `.gitignore` covers secrets/output/tools.
 - **Related:** [[nano-banana-d4-test]], [[architecture-overview]], [[claude-settings]], [[claude-md]], [[vault-sync-hook]], [[sqlite-brand-registry]]
+
+### 2026-07-02 — fix pass: cleanup + doc-drift repairs [shipped]
+- **What was done:** Applied every fix Sivan approved from the audit. **Cleanup:** removed the broken `.claude/skills/brainstorming` symlink (killed the per-command git warning; native symlink re-creation needs admin, so it stays removed), deleted stale worktree leftovers `objective-bassi-3b3072` (~70 MB) + both merged local branches, untracked `.claude/settings.local.json` (`git rm --cached`) and gitignored it, dropped unused deps `@anthropic-ai/sdk` + `headroom-ai` from `package.json`. **Doc drift:** [[architecture-overview]] Overview rewritten to Nano Banana reality; `CLAUDE.md` counts (6 sub-agents / 7 skills) + scripts list fixed; new [[gemini-image-script]] topic file (dangling wikilink resolved) + index lines; `sync_vault.js` header comments repointed `vault/`→`banner_create/`; stale TODO item marked done.
+- **Decisions:** Blocked twice by the auto-classifier on permission-file writes (`settings.json` allow-rule for gemini_image.js, `settings.local.json` prune) — both handed to Sivan as manual paste-ins rather than worked around. Left `Bash(node scripts/replicate_image.js:*)` allow rule in place (B1 is still planned). וילה סוליס resume left for Sivan's call.
+- **Notes / Caveats:** `git push origin main` still pending (user-only). Brainstorming skill content intact at `.agents/skills/brainstorming` if she ever wants it re-linked/copied.
+- **Related:** [[claude-settings]], [[architecture-overview]], [[gemini-image-script]], [[claude-md]], [[nano-banana-d4-test]]

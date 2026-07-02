@@ -11,8 +11,6 @@
     "db:migrate": "node scripts/migrate_existing_sessions.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.102.0",
-    "headroom-ai": "^0.22.4",
     "sharp": "^0.34.5"
   }
 }

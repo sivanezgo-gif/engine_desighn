@@ -4,10 +4,8 @@
 First end-to-end run of the Nano Banana **full-design** pipeline, on client **"המושבה"** (boutique heritage hotel, Kfar Tavor). Driven from the **main thread** (the orchestrator can't run as a background sub-agent — see F1). Result: the flow **works** and produces studio-quality output — a `310×600` banner and `1366×200` header with **correct Hebrew, the logo, and a CTA baked in**, validated (`validate_export.js` pass). Session: `output/hamoshava-20260630-144128/`. See [[canva-designer-agent]], [[gemini-image-script]].
 
 ## Open Questions
-- F1: rewire `/banner-create` so the **main agent** runs the orchestration (gates + nested sub-agents don't work from a background sub-agent).
-- F2: move logo generation off Canva onto Nano Banana (Canva Branch B finalize is broken).
-- F3: harden `gemini_image.js` intermittent libuv exit crash on Windows.
-- `settings.json` allow-rule for `gemini_image.js` still pending (user action; classifier blocks self-edit).
+- `settings.json` allow-rule for `gemini_image.js` still pending (user action; classifier blocks self-edit — re-confirmed 2026-07-02).
+- Remaining D4 integration debt: fully automated `/banner-create` run (auto 3 variants in canva-designer + auto design-qa) not yet verified end-to-end.
 
 ## Session Log
 

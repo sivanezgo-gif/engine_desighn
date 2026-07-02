@@ -57,7 +57,7 @@
 
 ## מפת ארכיטקטורה
 
-`1 orchestrator + 5 sub-agents + 5 skills + scripts + SQLite registry`, מודבקים ב-slash command יחיד.
+`1 orchestrator + 6 sub-agents + 7 skills + scripts + SQLite registry`, מודבקים ב-slash command יחיד.
 
 **Agents (`.claude/agents/`):**
 - `banner-orchestrator` — control-flow, dispatch, gates, session state
@@ -74,6 +74,8 @@
 - `visual-design-principles` — עקרונות עיצוב (פורמט, צבע, טיפוגרפיה, quality gates)
 - `marketing-thinking` — מיצוב מותג, verticals, tone→visual mapping
 - `hospitality-copywriting` — כתיבת כותרות לאירוח
+- `advanced-color-theory` — הרמוניות צבע, ΔE, נגישות (מרחיב את visual-design §2)
+- `photography-composition` — קומפוזיציה צילומית ל-prompts (מרחיב את visual-design §4)
 - (+ `obsidian-*` — עבודה מול ה-vault)
 
 **Slash command (`.claude/commands/`):** `/banner-create [business_name] [url]` — invoker דק לאורקסטרטור.
@@ -84,7 +86,7 @@
 
 ```
 output/{session_id}/        # תוצרי סשן: logo/ backgrounds/ chosen_set/ final/ + session_state.json, session.log
-scripts/                    # gemini_image.js (ננו בננה, ברירת מחדל), openai_image.js (fallback), resize.js, brand_db.js, validate_export.js, remove_bg.js, upscale.js, render_headline_mock.js, sync_vault.js
+scripts/                    # gemini_image.js (ננו בננה, ברירת מחדל), openai_image.js (fallback), resize.js, compose_banner.js, brand_db.js, migrate_existing_sessions.js, validate_export.js, remove_bg.js, upscale.js, render_headline_mock.js, sync_vault.js
 .claude/{agents,skills,commands}/
 banner_create/                      # זיכרון ארוך-טווח (Meeting Notes / Brand Guidelines / ...)
 .env                        # סודות (לא ב-git)

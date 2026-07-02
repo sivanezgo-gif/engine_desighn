@@ -37,5 +37,8 @@ tools/
 # Claude Code worktrees (ephemeral, created + destroyed by the harness)
 .claude/worktrees/
 
+# personal per-machine Claude Code overrides (never commit)
+.claude/settings.local.json
+
 # Obsidian app config inside the vault (never commit workspace/appearance state)
 banner_create/.obsidian/
