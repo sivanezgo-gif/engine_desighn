@@ -114,17 +114,19 @@ Generate 3 design options (banner + header) for the selected direction. **6 Nano
    Style: {selected_direction.name} — {selected_direction.description}
    Atmosphere: {brand_profile.tone}, {selected_direction.background_keywords}
    Colors: dominant {palette[0]}, accent {palette[1]}.
-   Render this EXACT Hebrew headline, right-to-left, large, legible, high contrast, elegant: {headline}
-   Near the bottom, add a clear rounded CALL-TO-ACTION button (warm accent color, contrasting text) with a short Hebrew CTA, right-to-left, centered: {cta}   # e.g. הזמינו אונליין / הזמינו כעת — a booking CTA is MANDATORY on every banner (§9.6 Mode B).
+   PURE NATURAL / SCENIC IMAGERY ONLY — absolutely NO buildings, NO houses, NO structures, NO architecture, NO rooftops anywhere in the image, unless {selected_direction.background_keywords} explicitly names the venue's OWN verified building. A generic AI-invented building could mislead viewers about the venue's actual appearance — never fabricate one (see §4 note, and D4 finding on המושבה 2026-07-02).
+   Render this EXACT Hebrew headline ONCE, right-to-left, large, legible, high contrast, elegant: {headline}
+   Near the bottom, add EXACTLY ONE rounded CALL-TO-ACTION button (only one — do not repeat it), warm accent color, contrasting text, short Hebrew CTA, right-to-left, centered: {cta}   # e.g. הזמינו אונליין / הזמינו כעת — a booking CTA is MANDATORY on every banner (§9.6 Mode B).
    Incorporate the attached logo cleanly in a top corner — small (≤30% width), undistorted, original colors.
-   Match the layout/typographic mood of the attached style reference. Premium, uncluttered. Hebrew spelling must be exact.
+   Match the layout/typographic mood of the attached style reference. Premium, uncluttered. Hebrew spelling must be exact. Do not duplicate any text element.
    Variation cue: {set cue}
    ```
 
    **Header full-design prompt (target 1366×200 → aspect 21:9, cropped after):**
    ```
    Create a wide panoramic website header for a hospitality venue.
-   Style / Colors as above. Render the Hebrew brand name / short headline on the RIGHT side (right-aligned, within the right third), right-to-left: {brand_or_headline}
+   Style / Colors as above. PURE NATURAL / SCENIC IMAGERY ONLY — absolutely NO buildings, NO houses, NO structures, NO architecture, NO rooftops anywhere in the image, unless {selected_direction.background_keywords} explicitly names the venue's OWN verified building — never fabricate one.
+   Render the Hebrew brand name / short headline on the RIGHT side (right-aligned, within the right third), right-to-left: {brand_or_headline}
    IMPORTANT: keep the LEFT third clear and simple — NO text and NO logo there — a logo is injected on the left later (§9.6). Keep the very top and bottom simple (they get cropped). Hebrew spelling must be exact.
    ```
    (Header takes **no logo `--ref`** — the left-side logo is added downstream, not baked in. The banner still takes the logo `--ref`.)
