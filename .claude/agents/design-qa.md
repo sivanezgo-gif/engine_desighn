@@ -99,8 +99,11 @@ Downscale the banner to 50% (≈155×300) and read it — confirm the headline i
 Illegible → minor defect `illegible_at_50pct`.
 
 ### G. Text rendering (mode-aware)
-- **`design_mode: full` (Nano Banana — default):** the Hebrew headline is rendered **into** the image. Verify it is **spelled correctly, fully formed (no garbled/cut letters), right-to-left, and legible**. Wrong spelling / reversed / garbled Hebrew → **blocking** defect `hebrew_render_bad`. Any *unintended* extra text/watermark → minor `bg_text_artifact`.
+- **`design_mode: full` (Nano Banana — default):** the Hebrew headline is rendered **into** the image. Verify it is **spelled correctly, fully formed (no garbled/cut letters), right-to-left, and legible**. Wrong spelling / reversed / garbled Hebrew → **blocking** defect `hebrew_render_bad`. Any *unintended* extra text/watermark → minor `bg_text_artifact`. Duplicated text/CTA button rendered twice → minor `duplicate_text_element`.
 - **`design_mode: background` (Canva adds text):** the background must carry NO baked text — confirm no stray letterforms/watermarks in the imagery. Visible text artifacts → minor defect `bg_text_artifact`.
+
+### H. No fabricated building (full mode)
+Look for any building, house, rooftop, or architectural structure in the banner/header imagery. Unless `brand_profile` explicitly confirms it's the venue's own verified building (e.g. supplied via a real reference photo), a rendered structure is an **AI-invented building that could mislead a viewer about the venue's actual appearance** — this is a compliance issue, not just a style one (found live on המושבה, 2026-07-02). Any unverified structure → **blocking** defect `fabricated_building`.
 
 ---
 
@@ -108,8 +111,8 @@ Illegible → minor defect `illegible_at_50pct`.
 
 | Severity | Examples | Resulting status |
 |----------|----------|------------------|
-| Blocking | wrong dimensions, contrast < 4.5:1, RTL reversed, garbled/misspelled Hebrew (`hebrew_render_bad`, full mode) | `fail` |
-| Minor | palette drift, logo crowding, slight illegibility, bg artifact | `options` |
+| Blocking | wrong dimensions, contrast < 4.5:1, RTL reversed, garbled/misspelled Hebrew (`hebrew_render_bad`, full mode), unverified fabricated building (`fabricated_building`) | `fail` |
+| Minor | palette drift, logo crowding, slight illegibility, bg artifact, duplicated text element | `options` |
 | None | all gates pass | `ok` |
 
 Each entry in `defects` is `{ "code": "...", "severity": "blocking|minor", "where": "banner|header", "detail": "..." }`.

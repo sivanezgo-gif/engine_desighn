@@ -13,9 +13,8 @@
 - [ ] [2026-06-30] Infra: להוסיף הרשאה ל-`gemini_image.js` ב-`.claude/settings.json` (פעולת משתמשת)
   - הקשר: צריך `"Bash(node scripts/gemini_image.js:*)"` ב-allow-list (ליד `openai_image.js`). ה-auto-classifier חסם ל-Claude לערוך הרשאות, אז זה ידני. בלי זה canva-designer יקבל prompt הרשאה בכל ריצת ננו בננה. הסקריפט עצמו רץ תקין.
   - עדיפות: גבוהה
-- [ ] [2026-07-01] Infra: למזג/לדחוף את `nano-banana` → `main` ב-GitHub (פעולת משתמשת)
-  - הקשר: כל עבודת ננו בננה (6 קומיטים) על ענף `nano-banana` ונדחפה. `main` המקומי כבר ממוזג (fast-forward), אבל ה-auto-classifier חוסם ל-Claude לדחוף ישירות ל-main. לסיים ידנית: `git push origin main`, או למזג את ה-PR ב-GitHub (create PR מ-nano-banana → Merge).
-  - עדיפות: גבוהה
+- [x] [2026-07-01] Infra: למזג/לדחוף את `nano-banana` → `main` ב-GitHub ✅ בוצע
+  - הקשר: סיון דחפה ידנית `git push origin main` ב-2026-07-02 — origin/main מסונכרן (607a4fc). אפשר למחוק את `nano-banana` ב-GitHub (כבר ממוזג).
 - [~] [2026-07-01] Banner: D4 — ריצת `/banner-create` מלאה עם **ננו בננה (מצב full)** — **הזרימה עובדת**, נותרו תיקוני אינטגרציה
   - הקשר: הורץ חי מקצה-לקצה על לקוח "המושבה" (main-thread orchestration): מחקר → לוגו → כותרת → כיוון → **עיצוב מלא (עברית+לוגו+CTA)** → resize → validate = **pass**. הפלט ברמת סטודיו, עברית מושלמת. נותר: (א) ריצה אוטומטית דרך ה-orchestrator (ראה ממצא F1 למטה — כרגע חייב main-thread), (ב) יצירת 3 וריאציות אוטומטית ב-canva-designer, (ג) `design-qa` אוטומטי.
   - עדיפות: גבוהה
