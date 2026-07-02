@@ -9,6 +9,7 @@ Technical documentation for every code, agent, command, script, and config file 
 
 ### Test runs & findings
 - [[nano-banana-d4-test]] — first full-flow Nano Banana test (המושבה, 2026-07-01): flow works; findings F1 (orchestrator must be main-thread), F2 (logo→Nano Banana), F3 (libuv exit)
+- [[project-health-audit]] — periodic whole-project review snapshots: git hygiene, config drift, doc accuracy, cleanup items
 
 ### Architecture
 - [[architecture-overview]] — high-level system map: orchestrator + 3 sub-agents + 3 skills + scripts
